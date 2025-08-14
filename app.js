@@ -65,6 +65,7 @@
   bindGlobalShortcuts(config.keybinds);
   initQuickLauncher(config);
   initKeybindsWidget(config.keybinds);
+  setInitialFocus();
 
   function mergeDeep() {
     const result = {};
@@ -364,6 +365,9 @@
     const handleTL = document.getElementById('mb-resize-tl');
     if (!input || !frame) return;
 
+    // Ensure iframe does not capture initial focus or tab order on load
+    try { frame.setAttribute('tabindex', '-1'); } catch (_) {}
+
     // Initialize from config if provided
     if (miniCfg && typeof miniCfg.defaultUrl === 'string' && miniCfg.defaultUrl) {
       input.value = miniCfg.defaultUrl;
@@ -586,8 +590,7 @@
 
   function bindGlobalShortcuts(keys) {
     document.addEventListener('keydown', function (e) {
-      if (isTypingInInput(e)) return;
-      // Open/close quick launcher
+      // Open/close quick launcher — allow even when typing inside inputs
       if (matchesKey(e, keys.quickLauncherOpen)) {
         e.preventDefault();
         var overlay = document.getElementById('quick-launcher');
@@ -598,6 +601,7 @@
         }
         return;
       }
+      if (isTypingInInput(e)) return;
       // Focus Google
       if (matchesKey(e, keys.focusGoogle)) {
         const g = document.getElementById('googleQuery');
@@ -704,6 +708,20 @@
     const tag = String(el.tagName || '').toLowerCase();
     const editable = el.isContentEditable;
     return editable || tag === 'input' || tag === 'textarea' || tag === 'select';
+  }
+
+  function setInitialFocus() {
+    try {
+      // Ensure nothing steals focus so global keybinds work immediately
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+      // Make body programmatically focusable and focus it
+      if (document.body) {
+        if (!document.body.hasAttribute('tabindex')) document.body.setAttribute('tabindex', '-1');
+        document.body.focus({ preventScroll: true });
+      }
+    } catch (_) {}
   }
 
   // ===== Local analytics (optional, localStorage only) =====
