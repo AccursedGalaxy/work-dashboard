@@ -456,7 +456,7 @@
             if (ch === '"' && !inSingle) { inDouble = !inDouble; continue; }
             if (ch === "'" && !inDouble) { inSingle = !inSingle; continue; }
             if (!inSingle && !inDouble && /\s/.test(ch)) {
-                if (cur) tokens.push(cur), cur = '';
+                if (cur) { tokens.push(cur); cur = ''; }
                 continue;
             }
             cur += ch;
