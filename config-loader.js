@@ -154,7 +154,7 @@
                 continue;
             }
         }
-        return Array.isArray(stack[0].node) ? { items: stack[0].node } : stack[0].node;
+        return Array.isArray(stack[0].node) ? { [ITEMS_KEY]: stack[0].node } : stack[0].node;
     }
     function tryJsonParse(text) {
         try { return JSON.parse(text); } catch (_) { return null; }
