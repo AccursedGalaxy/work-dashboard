@@ -762,7 +762,14 @@
                 state.endAt += 5 * 60 * 1000;
                 tick();
             });
-            overlay.addEventListener('click', function (e) { if (e.target === overlay) { clearInterval(state.timerId); overlay.remove(); state.overlay = null; } });
+            function handleOverlayClick(e) {
+                if (e.target === overlay) {
+                    clearInterval(state.timerId);
+                    overlay.remove();
+                    state.overlay = null;
+                }
+            }
+            overlay.addEventListener('click', handleOverlayClick);
             document.addEventListener('keydown', function onKey(e) {
                 var el = document.getElementById('timer-overlay');
                 if (!el) { document.removeEventListener('keydown', onKey); return; }
