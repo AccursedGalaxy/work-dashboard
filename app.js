@@ -302,13 +302,26 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       const raw = input.value.trim();
+      const frame = document.getElementById('mb-frame');
+      const addr = document.getElementById('mb-url');
+      const target = document.getElementById('mb-target');
+      function openGoUrl(href) {
+        if (addr) addr.value = href;
+        if (target && target.value === 'tab') {
+          window.open(href, '_blank', 'noopener,noreferrer');
+        } else if (frame) {
+          frame.src = href;
+        } else {
+          window.location.href = href;
+        }
+      }
       if (!raw || raw === 'go/' || raw.toLowerCase() === 'go') {
-        navigate(goCfg.homepageUrl);
+        openGoUrl(goCfg.homepageUrl);
         return;
       }
       const key = raw.startsWith('go/') ? raw.slice(3) : raw.startsWith('go ') ? raw.slice(3) : raw;
       const resolved = resolveGoKey(goCfg, key);
-      navigate(resolved);
+      openGoUrl(resolved);
     });
   }
 

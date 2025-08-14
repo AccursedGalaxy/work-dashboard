@@ -41,10 +41,6 @@ window.DASHBOARD_DEFAULT_CONFIG = {
     // If provided, unknown keys will open this URL + encoded key
     // e.g. 'https://go/search?q='
     fallbackSearchUrl: '',
-    // Map short keys to full URLs (case-insensitive)
-    keyToUrl: {
-      PAM: 'https://intranet.example.com/pam'
-    }
   },
   sections: [
     {
