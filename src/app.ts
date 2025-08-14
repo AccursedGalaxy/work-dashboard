@@ -10,7 +10,8 @@
     const defaultConfig = (window as any).DASHBOARD_DEFAULT_CONFIG || {};
     const fileConfig = (window as any).__FILE_CONFIG__ || {};
     const userConfig = (window as any).DASHBOARD_CONFIG || {};
-    config = mergeDeep({
+    // Compose the base configuration first (without runtime overrides)
+    const baseConfig = mergeDeep({
       theme: 'auto',
       google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
       miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
@@ -64,9 +65,20 @@
       ]
     }, defaultConfig, fileConfig, userConfig);
 
+    // If a hash-based override is present and valid, persist it and clear the hash; back up pre-override config
+    const hashOverride = readConfigFromUrlHash();
+    if (hashOverride && isPlainObject(hashOverride)) {
+      try { localStorage.setItem('config:backup', JSON.stringify(baseConfig)); } catch (_) {}
+      try { localStorage.setItem('config:override', JSON.stringify(hashOverride)); } catch (_) {}
+      clearConfigHashFromUrl();
+    }
+    const storedOverride = readStoredOverride();
+
+    config = mergeDeep(baseConfig, storedOverride || {});
+
     initTheme(config.theme);
-      backgroundCycler = createBackgroundCycler(config.backgrounds);
-  bindThemeToggle(backgroundCycler);
+    backgroundCycler = createBackgroundCycler(config.backgrounds);
+    bindThemeToggle(backgroundCycler);
     applyUiConfig(config as any);
     renderSections(config.sections);
     bindGoogleForm(config.google);
@@ -75,6 +87,7 @@
     bindGlobalShortcuts(config.keybinds);
     initQuickLauncher(config);
     initKeybindsWidget(config.keybinds);
+    initConfigManagementUI();
     setInitialFocus();
     initPWAInstallPrompt();
     registerServiceWorker();
@@ -191,7 +204,7 @@
       if (timer) clearInterval(timer);
       if (!cfg.enable || images.length === 0) return;
       if (reduceMotion) return; // respect prefers-reduced-motion: do not auto-cycle
-      timer = window.setInterval(next, Math.max(3000, cfg.cycleMs | 0));
+      timer = window.setInterval(next, Math.max(3000, (cfg.cycleMs as any) | 0));
     }
 
     function next() {
@@ -227,7 +240,7 @@
         el.innerHTML = '<div class="bg-layer is-showing"></div><div class="bg-layer"></div><div class="bg-overlay"></div>';
         document.body.prepend(el);
       }
-      (el as HTMLElement).style.setProperty('--bg-transition-ms', String(Math.max(200, transitionMs | 0)) + 'ms');
+      (el as HTMLElement).style.setProperty('--bg-transition-ms', String(Math.max(200, (transitionMs as any) | 0)) + 'ms');
       return el as HTMLElement;
     }
 
@@ -848,6 +861,288 @@
       return raw ? JSON.parse(raw) : {};
     } catch (_) { return {}; }
   }
+
+  // ===== Config management (import/export/hash) =====
+  function initConfigManagementUI() {
+    const statusEl = document.getElementById('cfg-status');
+    function setStatus(msg: string, isError?: boolean) {
+      if (!statusEl) return;
+      statusEl.textContent = msg;
+      if (isError) statusEl.classList.add('error'); else statusEl.classList.remove('error');
+    }
+
+    const exportFileBtn = document.getElementById('cfg-export-file');
+    const exportUrlBtn = document.getElementById('cfg-export-url');
+    const exportClipboardBtn = document.getElementById('cfg-export-clipboard');
+    const importFileReplaceBtn = document.getElementById('cfg-import-file-replace');
+    const importFileMergeBtn = document.getElementById('cfg-import-file-merge');
+    const importClipboardReplaceBtn = document.getElementById('cfg-import-clipboard-replace');
+    const importClipboardMergeBtn = document.getElementById('cfg-import-clipboard-merge');
+    const loadFromUrlBtn = document.getElementById('cfg-load-url');
+    const fileInput = document.getElementById('cfg-file-input') as HTMLInputElement | null;
+
+    if (exportFileBtn) exportFileBtn.addEventListener('click', function () {
+      try {
+        const json = JSON.stringify(config, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dashboard-config.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus('Config downloaded.');
+      } catch (e) {
+        setStatus('Export failed.', true);
+      }
+    });
+
+    if (exportUrlBtn) exportUrlBtn.addEventListener('click', async function () {
+      try {
+        const json = JSON.stringify(config);
+        const b64 = toBase64(json);
+        const shareUrl = window.location.origin + window.location.pathname + '#config=' + encodeURIComponent(b64);
+        await writeClipboardText(shareUrl);
+        setStatus('Shareable URL copied to clipboard.');
+      } catch (e) {
+        setStatus('Failed to create share URL.', true);
+      }
+    });
+
+    if (exportClipboardBtn) exportClipboardBtn.addEventListener('click', async function () {
+      try {
+        await writeClipboardText(JSON.stringify(config, null, 2));
+        setStatus('Configuration JSON copied to clipboard.');
+      } catch (e) {
+        setStatus('Clipboard write failed.', true);
+      }
+    });
+
+    let pendingMode: 'replace' | 'merge' = 'replace';
+    function openFilePicker(mode: 'replace' | 'merge') {
+      pendingMode = mode;
+      if (!fileInput) return;
+      fileInput.value = '';
+      fileInput.click();
+    }
+
+    if (importFileReplaceBtn) importFileReplaceBtn.addEventListener('click', function () { openFilePicker('replace'); });
+    if (importFileMergeBtn) importFileMergeBtn.addEventListener('click', function () { openFilePicker('merge'); });
+
+    if (fileInput) fileInput.addEventListener('change', function () {
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        try {
+          const text = String(reader.result || '');
+          const obj = JSON.parse(text);
+          handleImportedConfig(obj, pendingMode, 'file');
+        } catch (e) {
+          setStatus('Invalid JSON file.', true);
+        }
+      };
+      reader.readAsText(f);
+    });
+
+    if (importClipboardReplaceBtn) importClipboardReplaceBtn.addEventListener('click', async function () {
+      try {
+        const text = await readClipboardText();
+        const obj = JSON.parse(text);
+        handleImportedConfig(obj, 'replace', 'clipboard');
+      } catch (e) {
+        setStatus('Clipboard read or JSON parse failed.', true);
+      }
+    });
+
+    if (importClipboardMergeBtn) importClipboardMergeBtn.addEventListener('click', async function () {
+      try {
+        const text = await readClipboardText();
+        const obj = JSON.parse(text);
+        handleImportedConfig(obj, 'merge', 'clipboard');
+      } catch (e) {
+        setStatus('Clipboard read or JSON parse failed.', true);
+      }
+    });
+
+    if (loadFromUrlBtn) loadFromUrlBtn.addEventListener('click', async function () {
+      try {
+        const found = readConfigFromUrlHash();
+        if (found && isPlainObject(found)) {
+          const ok = confirm('Apply configuration from current URL?\n\n' + summarizeConfig(found));
+          if (ok) {
+            applyRuntimeOverride(found, true);
+            window.location.reload();
+            return;
+          }
+        } else {
+          const input = prompt('Paste URL containing #config=...');
+          if (input) {
+            const u = new URL(input);
+            const parsed = readConfigFromHashString(u.hash || '');
+            if (parsed && isPlainObject(parsed)) {
+              const ok2 = confirm('Apply configuration from pasted URL?\n\n' + summarizeConfig(parsed));
+              if (ok2) {
+                applyRuntimeOverride(parsed, true);
+                window.location.href = window.location.origin + window.location.pathname; // drop hash
+                return;
+              }
+            } else {
+              setStatus('No valid config found in URL.', true);
+            }
+          }
+        }
+      } catch (e) {
+        setStatus('Failed to load from URL.', true);
+      }
+    });
+
+    function handleImportedConfig(obj: any, mode: 'replace' | 'merge', source: string) {
+      const valid = validateConfigObject(obj);
+      if (!valid.valid) {
+        setStatus('Validation failed: ' + valid.errors.join('; '), true);
+        return;
+      }
+      const summary = summarizeConfig(obj);
+      const ok = confirm((mode === 'replace' ? 'Replace' : 'Merge') + ' current configuration with imported ' + source + ' config?\n\n' + summary);
+      if (!ok) return;
+      applyRuntimeOverride(obj, mode === 'replace');
+      window.location.reload();
+    }
+  }
+
+  function writeClipboardText(text: string) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text);
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } finally { ta.remove(); }
+    return Promise.resolve();
+  }
+
+  async function readClipboardText(): Promise<string> {
+    if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+      return navigator.clipboard.readText();
+    }
+    throw new Error('Clipboard API unavailable');
+  }
+
+  function applyRuntimeOverride(obj: any, replace: boolean) {
+    try {
+      const currentOverride = readStoredOverride();
+      const nextOverride = replace ? obj : mergeDeep(currentOverride || {}, obj);
+      try { localStorage.setItem('config:backup', JSON.stringify(config)); } catch (_) {}
+      localStorage.setItem('config:override', JSON.stringify(nextOverride));
+    } catch (_) {}
+  }
+
+  function readStoredOverride() {
+    try {
+      const raw = localStorage.getItem('config:override');
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function readConfigFromUrlHash(): any | null {
+    return readConfigFromHashString(window.location.hash || '');
+  }
+
+  function readConfigFromHashString(hash: string): any | null {
+    if (!hash) return null;
+    const raw = String(hash || '');
+    let b64: string | null = null;
+    if (raw.indexOf('#config=') === 0) {
+      b64 = raw.slice('#config='.length);
+    } else if (raw.indexOf('#') === 0 && raw.indexOf('config=') !== -1) {
+      const qs = new URLSearchParams(raw.slice(1));
+      const v = qs.get('config');
+      b64 = v || null;
+    }
+    if (!b64) return null;
+    try {
+      const json = fromBase64(decodeURIComponent(b64));
+      const obj = JSON.parse(json);
+      return obj && typeof obj === 'object' ? obj : null;
+    } catch (_) { return null; }
+  }
+
+  function clearConfigHashFromUrl() {
+    try {
+      if (window.history && typeof window.history.replaceState === 'function') {
+        window.history.replaceState(null, document.title, window.location.origin + window.location.pathname + window.location.search);
+      } else {
+        window.location.hash = '';
+      }
+    } catch (_) {}
+  }
+
+  function toBase64(str: string) {
+    try {
+      if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+    } catch (_) {}
+    // Fallback
+    const utf8 = new TextEncoder().encode(str);
+    let s = '';
+    for (let i = 0; i < utf8.length; i++) s += String.fromCharCode(utf8[i]);
+    return btoa(s);
+  }
+
+  function fromBase64(b64: string) {
+    try {
+      const s = atob(b64);
+      // Decode UTF-8
+      return decodeURIComponent(escape(s));
+    } catch (_) {
+      // Fallback
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+  }
+
+  function validateConfigObject(obj: any): { valid: boolean, errors: string[] } {
+    const errors: string[] = [];
+    if (!obj || typeof obj !== 'object') return { valid: false, errors: ['Config must be an object'] };
+    if (obj.theme && !['auto', 'light', 'dark'].includes(String(obj.theme))) errors.push('theme must be auto|light|dark');
+    if (obj.google && typeof obj.google !== 'object') errors.push('google must be an object');
+    if (obj.miniBrowser && typeof obj.miniBrowser !== 'object') errors.push('miniBrowser must be an object');
+    if (obj.analytics && typeof obj.analytics !== 'object') errors.push('analytics must be an object');
+    if (obj.keybinds && typeof obj.keybinds !== 'object') errors.push('keybinds must be an object');
+    if (obj.go && typeof obj.go !== 'object') errors.push('go must be an object');
+    if (obj.backgrounds && typeof obj.backgrounds !== 'object') errors.push('backgrounds must be an object');
+    if (obj.sections && !Array.isArray(obj.sections)) errors.push('sections must be an array');
+    if (Array.isArray(obj.sections)) {
+      obj.sections.forEach(function (s: any, i: number) {
+        if (!s || typeof s !== 'object') { errors.push('sections[' + i + '] must be an object'); return; }
+        if (typeof s.title !== 'string') errors.push('sections[' + i + '].title must be a string');
+        if (!Array.isArray(s.links)) errors.push('sections[' + i + '].links must be an array');
+      });
+    }
+    return { valid: errors.length === 0, errors: errors };
+  }
+
+  function summarizeConfig(obj: any) {
+    try {
+      const sections = Array.isArray(obj && obj.sections) ? obj.sections.length : 0;
+      let links = 0;
+      if (Array.isArray(obj && obj.sections)) {
+        (obj.sections as any[]).forEach(function (s: any) { links += Array.isArray(s.links) ? s.links.length : 0; });
+      }
+      const theme = (obj && obj.theme) ? String(obj.theme) : 'auto';
+      return 'Theme: ' + theme + '\nSections: ' + sections + '\nLinks: ' + links;
+    } catch (_) { return 'Config summary unavailable'; }
+  }
+
+  function isPlainObject(v: any) { return !!(v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype); }
+
 })();
 
 

@@ -47,6 +47,24 @@
       </div>
     </section>
 
+    <section class="card" aria-labelledby="cfg-title">
+      <h2 id="cfg-title">Configuration</h2>
+      <div class="config-actions">
+        <button id="cfg-export-file" title="Download current configuration as JSON">Export Config ↓</button>
+        <button id="cfg-export-url" title="Copy shareable URL with config in hash">Share via URL</button>
+        <button id="cfg-export-clipboard" title="Copy configuration JSON to clipboard">Copy JSON</button>
+      </div>
+      <div class="config-actions">
+        <button id="cfg-import-file-replace" title="Import JSON file and replace current configuration">Import File (Replace)</button>
+        <button id="cfg-import-file-merge" title="Import JSON file and merge with current configuration">Import File (Merge)</button>
+        <button id="cfg-import-clipboard-replace" title="Paste JSON from clipboard and replace configuration">Clipboard Import (Replace)</button>
+        <button id="cfg-import-clipboard-merge" title="Paste JSON from clipboard and merge into configuration">Clipboard Import (Merge)</button>
+        <button id="cfg-load-url" title="Apply configuration from current page URL hash (#config=...) or paste a URL">Load from URL</button>
+      </div>
+      <input id="cfg-file-input" type="file" accept=".json,application/json" hidden>
+      <p class="hint" id="cfg-status" aria-live="polite"></p>
+    </section>
+
     <section>
       <div id="linksGrid" class="links-grid"></div>
     </section>
