@@ -1102,37 +1102,63 @@
                 }
             });
         if (loadFromUrlBtn)
+        if (loadFromUrlBtn)
             loadFromUrlBtn.addEventListener('click', async function () {
                 try {
                     const found = readConfigFromUrlHash();
                     if (found && isPlainObject(found)) {
-                        const ok = confirm('Apply configuration from current URL?\n\n' + summarizeConfig(found));
+                        // Validate before applying
+                        const check = validateConfigObject(found);
+                        if (!check.valid) {
+                            setStatus(
+                                'URL config invalid: ' + check.errors.join('; '),
+                                true
+                            );
+                            clearConfigHashFromUrl();
+                            return;
+                        }
+                        const ok = confirm(
+                            'Apply configuration from current URL?\n\n' +
+                            summarizeConfig(found)
+                        );
                         if (ok) {
                             applyRuntimeOverride(found, true);
+                            clearConfigHashFromUrl();
                             window.location.reload();
                             return;
                         }
-                    }
-                    else {
+                    } else {
                         const input = prompt('Paste URL containing #config=...');
                         if (input) {
                             const u = new URL(input);
                             const parsed = readConfigFromHashString(u.hash || '');
                             if (parsed && isPlainObject(parsed)) {
-                                const ok2 = confirm('Apply configuration from pasted URL?\n\n' + summarizeConfig(parsed));
-                                if (ok2) {
-                                    applyRuntimeOverride(parsed, true);
-                                    window.location.href = window.location.origin + window.location.pathname; // drop hash
+                                // Validate before applying pasted URL config
+                                const check2 = validateConfigObject(parsed);
+                                if (!check2.valid) {
+                                    setStatus(
+                                        'URL config invalid: ' + check2.errors.join('; '),
+                                        true
+                                    );
                                     return;
                                 }
-                            }
-                            else {
+                                const ok2 = confirm(
+                                    'Apply configuration from pasted URL?\n\n' +
+                                    summarizeConfig(parsed)
+                                );
+                                if (ok2) {
+                                    applyRuntimeOverride(parsed, true);
+                                    window.location.href =
+                                        window.location.origin +
+                                        window.location.pathname; // drop hash
+                                    return;
+                                }
+                            } else {
                                 setStatus('No valid config found in URL.', true);
                             }
                         }
                     }
-                }
-                catch (e) {
+                } catch (e) {
                     setStatus('Failed to load from URL.', true);
                 }
             });
