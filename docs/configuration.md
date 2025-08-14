@@ -16,7 +16,7 @@ Only specify the fields you need to change in `config.js`.
 ## Type shape
 
 ```ts
-// Pseudo‑types for documentation
+// Pseudo-types for documentation
 export type Theme = 'auto' | 'light' | 'dark';
 
 export interface DashboardConfig {
