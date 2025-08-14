@@ -322,11 +322,16 @@
       const key = raw.startsWith('go/') ? raw.slice(3) : raw.startsWith('go ') ? raw.slice(3) : raw;
       const resolved = resolveGoKey(goCfg, key);
 
-      // Local-only analytics: count go/ key usage to improve Quick Launcher ranking
+      // Local-only analytics: count go/ key or free-text intranet searches to improve Quick Launcher ranking
       if (config.analytics && config.analytics.enableLocal) {
         try {
           const matched = findGoKey(goCfg, key);
-          if (matched) incrementLocalCount('go:' + matched);
+          if (matched) {
+            incrementLocalCount('go:' + matched);
+          } else if (goCfg.fallbackSearchUrl) {
+            // Count free-text intranet searches under go-search:QUERY
+            incrementLocalCount('go-search:' + key);
+          }
         } catch (_) {}
       }
       openGoUrl(resolved);
@@ -475,7 +480,14 @@
       if (!(cfg.analytics && cfg.analytics.enableLocal)) return 0;
       try {
         const map = readCounts();
-        const key = it.type === 'go' ? ('go:' + it.label) : ('link:' + it.label);
+        let key;
+        if (it && typeof it.id === 'string' && it.id.indexOf('go-search:') === 0) {
+          key = it.id; // exact query-specific counter for go-search suggestions
+        } else if (it && it.type === 'go') {
+          key = 'go:' + it.label;
+        } else {
+          key = 'link:' + it.label;
+        }
         const c = map[key] || 0;
         return Math.min(5, c / 5);
       } catch (_) { return 0; }
@@ -488,7 +500,16 @@
 
     function openItem(it) {
       if (cfg.analytics && cfg.analytics.enableLocal) {
-        try { incrementLocalCount((it.type === 'go' ? 'go:' : 'link:') + it.label); } catch (_) {}
+        try {
+          if (it && it.type === 'go') {
+            incrementLocalCount('go:' + it.label);
+          } else if (it && it.type === 'go-search' && typeof it.id === 'string') {
+            // Count the exact search query used from the Quick Launcher suggestion
+            incrementLocalCount(it.id);
+          } else {
+            incrementLocalCount('link:' + it.label);
+          }
+        } catch (_) {}
       }
       window.open(it.url, '_blank', 'noopener,noreferrer');
       close();
