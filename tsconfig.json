@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "none",
+    "lib": ["ES2020", "DOM", "WebWorker"],
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": false,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "allowJs": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts"]
+}
+
+
