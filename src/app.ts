@@ -79,8 +79,17 @@
       clearConfigHashFromUrl();
     }
     const storedOverride = readStoredOverride();
-    config = mergeDeep(baseConfig, storedOverride || {});
-
+    if (storedOverride && isPlainObject(storedOverride)) {
+      const { valid, errors } = validateConfigObject(storedOverride);
+      if (!valid) {
+        try { console.warn('Ignoring invalid stored override:', errors); } catch (_) {}
+        config = baseConfig;
+      } else {
+        config = mergeDeep(baseConfig, storedOverride);
+      }
+    } else {
+      config = baseConfig;
+    }
     initTheme(config.theme);
     backgroundCycler = createBackgroundCycler(config.backgrounds);
     bindThemeToggle(backgroundCycler);
