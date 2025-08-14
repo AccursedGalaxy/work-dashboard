@@ -72,7 +72,7 @@ Security-conscious defaults:
 ## Getting started in 5 commands
 
 ```bash
-git clone <REPO_URL>
+git clone https://github.com/yourusername/work-dashboard.git
 cd work-dashboard
 npm install
 npm run build
