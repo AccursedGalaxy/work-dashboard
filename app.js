@@ -674,7 +674,7 @@
         }
     }
     function startFocusTimer(minutes) {
-        var ms = Math.max(1, minutes | 0) * 60 * 1000;
+        var ms = Math.max(1, Math.floor(minutes)) * 60 * 1000;
         // Singleton state stored on the function object
         var state = startFocusTimer.__state || { overlay: null, timerId: 0, endAt: 0 };
         startFocusTimer.__state = state;
