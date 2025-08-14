@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.example.js" defer></script>
+  <script src="config.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-left">
+      <h1 class="site-title">Work Dashboard</h1>
+    </div>
+    <div class="header-right">
+      <button id="themeToggle" class="theme-toggle" aria-label="Toggle color theme" title="Toggle theme">🌓</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="search-widgets">
+      <div class="card">
+        <h2>Google Search</h2>
+        <form id="googleForm" class="search-form" autocomplete="off">
+          <input id="googleQuery" name="q" type="search" placeholder="Search Google" inputmode="search" aria-label="Search Google">
+          <button type="submit">Search</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>go/ Intranet</h2>
+        <form id="goForm" class="search-form" autocomplete="off">
+          <input id="goQuery" name="go" type="text" placeholder="go/ or go/KEYWORD or KEYWORD" aria-label="Search go/ intranet">
+          <button type="submit">Go</button>
+        </form>
+        <p class="hint">Examples: <code>go/</code>, <code>go/PAM</code>, <code>PAM</code></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Links</h2>
+      <div id="linksGrid" class="links-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Edit your links in <code>config.js</code> (copy from <code>config.example.js</code>).</p>
+  </footer>
+</body>
+</html>
+
+
