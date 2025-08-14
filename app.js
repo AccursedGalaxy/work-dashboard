@@ -632,7 +632,7 @@
                 move(-1);
                 return;
             }
-            if (matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) {
+            if (e.key === 'Enter' || matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) {
                 e.preventDefault();
                 if (currentResults[selectedIndex])
                     openItem(currentResults[selectedIndex]);
