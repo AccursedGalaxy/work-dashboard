@@ -69,15 +69,41 @@
         if (hashOverride && isPlainObject(hashOverride)) {
             const { valid, errors } = validateConfigObject(hashOverride);
             if (valid) {
-                try { localStorage.setItem('config:backup', JSON.stringify(baseConfig)); } catch (_) { }
-                try { localStorage.setItem('config:override', JSON.stringify(hashOverride)); } catch (_) { }
-            } else {
-                try { console.warn('Ignoring invalid #config override:', errors); } catch (_) { }
+                try {
+                    localStorage.setItem('config:backup', JSON.stringify(baseConfig));
+                }
+                catch (_) { }
+                try {
+                    localStorage.setItem('config:override', JSON.stringify(hashOverride));
+                }
+                catch (_) { }
             }
+            else {
+                try {
+                    console.warn('Ignoring invalid #config override:', errors);
+                }
+                catch (_) { }
+            }
+            // Always clear any #config to avoid repeated application attempts
             clearConfigHashFromUrl();
         }
         const storedOverride = readStoredOverride();
-        config = mergeDeep(baseConfig, storedOverride || {});
+        if (storedOverride && isPlainObject(storedOverride)) {
+            const { valid, errors } = validateConfigObject(storedOverride);
+            if (!valid) {
+                try {
+                    console.warn('Ignoring invalid stored override:', errors);
+                }
+                catch (_) { }
+                config = baseConfig;
+            }
+            else {
+                config = mergeDeep(baseConfig, storedOverride);
+            }
+        }
+        else {
+            config = baseConfig;
+        }
         initTheme(config.theme);
         backgroundCycler = createBackgroundCycler(config.backgrounds);
         bindThemeToggle(backgroundCycler);
@@ -1173,16 +1199,21 @@
         return readConfigFromHashString(window.location.hash || '');
     }
     function readConfigFromHashString(hash) {
-        if (!hash) return null;
+        if (!hash)
+            return null;
         const raw = String(hash || '');
         const qs = new URLSearchParams(raw.startsWith('#') ? raw.slice(1) : raw);
         const v = qs.get('config');
-        if (!v) return null;
+        if (!v)
+            return null;
         try {
             const json = fromBase64(decodeURIComponent(v));
             const obj = JSON.parse(json);
             return obj && typeof obj === 'object' ? obj : null;
-        } catch (_) { return null; }
+        }
+        catch (_) {
+            return null;
+        }
     }
     function clearConfigHashFromUrl() {
         try {
@@ -1223,6 +1254,16 @@
             return new TextDecoder().decode(bytes);
         }
     }
+    function safeParseUrl(s) { try {
+        return new URL(s);
+    }
+    catch (_) {
+        return null;
+    } }
+    function isSafeHttpUrl(s) {
+        const u = safeParseUrl(s);
+        return !!u && (u.protocol === 'http:' || u.protocol === 'https:');
+    }
     function validateConfigObject(obj) {
         const errors = [];
         if (!obj || typeof obj !== 'object')
@@ -1253,7 +1294,67 @@
                     errors.push('sections[' + i + '].title must be a string');
                 if (!Array.isArray(s.links))
                     errors.push('sections[' + i + '].links must be an array');
+                if (Array.isArray(s.links)) {
+                    s.links.forEach(function (lnk, j) {
+                        if (!lnk || typeof lnk !== 'object') {
+                            errors.push('sections[' + i + '].links[' + j + '] must be an object');
+                            return;
+                        }
+                        if (typeof lnk.label !== 'string')
+                            errors.push('sections[' + i + '].links[' + j + '].label must be a string');
+                        if (typeof lnk.url !== 'string') {
+                            errors.push('sections[' + i + '].links[' + j + '].url must be a string');
+                        }
+                        else if (!isSafeHttpUrl(lnk.url)) {
+                            errors.push('sections[' + i + '].links[' + j + '].url must use http(s) scheme');
+                        }
+                    });
+                }
             });
+        }
+        // URL sanity checks for known fields
+        if (obj.google && typeof obj.google.baseUrl === 'string') {
+            if (!isSafeHttpUrl(obj.google.baseUrl))
+                errors.push('google.baseUrl must use http(s) scheme');
+        }
+        if (obj.go) {
+            if (typeof obj.go.homepageUrl === 'string' && !isSafeHttpUrl(obj.go.homepageUrl)) {
+                errors.push('go.homepageUrl must use http(s) scheme');
+            }
+            if (typeof obj.go.fallbackSearchUrl === 'string' && !isSafeHttpUrl(obj.go.fallbackSearchUrl)) {
+                errors.push('go.fallbackSearchUrl must use http(s) scheme');
+            }
+            if (obj.go.keyToUrl && typeof obj.go.keyToUrl === 'object') {
+                Object.keys(obj.go.keyToUrl).forEach(function (k) {
+                    const v = obj.go.keyToUrl[k];
+                    if (typeof v !== 'string')
+                        errors.push('go.keyToUrl[' + k + '] must be a string URL');
+                    else if (!isSafeHttpUrl(v))
+                        errors.push('go.keyToUrl[' + k + '] must use http(s) scheme');
+                });
+            }
+        }
+        if (obj.miniBrowser && typeof obj.miniBrowser.defaultUrl === 'string') {
+            if (!isSafeHttpUrl(obj.miniBrowser.defaultUrl))
+                errors.push('miniBrowser.defaultUrl must use http(s) scheme');
+        }
+        if (obj.backgrounds) {
+            if (Array.isArray(obj.backgrounds.light)) {
+                obj.backgrounds.light.forEach(function (u, idx) {
+                    if (typeof u !== 'string')
+                        errors.push('backgrounds.light[' + idx + '] must be a string URL');
+                    else if (!isSafeHttpUrl(u))
+                        errors.push('backgrounds.light[' + idx + '] must use http(s) scheme');
+                });
+            }
+            if (Array.isArray(obj.backgrounds.dark)) {
+                obj.backgrounds.dark.forEach(function (u, idx) {
+                    if (typeof u !== 'string')
+                        errors.push('backgrounds.dark[' + idx + '] must be a string URL');
+                    else if (!isSafeHttpUrl(u))
+                        errors.push('backgrounds.dark[' + idx + '] must use http(s) scheme');
+                });
+            }
         }
         return { valid: errors.length === 0, errors: errors };
     }

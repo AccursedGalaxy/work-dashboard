@@ -79,6 +79,7 @@
       clearConfigHashFromUrl();
     }
     const storedOverride = readStoredOverride();
+
     if (storedOverride && isPlainObject(storedOverride)) {
       const { valid, errors } = validateConfigObject(storedOverride);
       if (!valid) {
@@ -90,6 +91,7 @@
     } else {
       config = baseConfig;
     }
+
     initTheme(config.theme);
     backgroundCycler = createBackgroundCycler(config.backgrounds);
     bindThemeToggle(backgroundCycler);
@@ -530,7 +532,7 @@
       const scored = q ? items.map(function (it) {
         return { item: it, score: fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it) };
       }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
-      scored.sort(function (a, b) { return b.score - a.score; });
+      scored.sort(function (a, b) { return b.score - a.score });
 
       // Dynamic go/ search suggestion
       let suggestion: any = null;
@@ -1116,6 +1118,12 @@
     }
   }
 
+  function safeParseUrl(s: string): URL | null { try { return new URL(s); } catch (_) { return null; } }
+  function isSafeHttpUrl(s: string): boolean {
+    const u = safeParseUrl(s);
+    return !!u && (u.protocol === 'http:' || u.protocol === 'https:');
+  }
+
   function validateConfigObject(obj: any): { valid: boolean, errors: string[] } {
     const errors: string[] = [];
     if (!obj || typeof obj !== 'object') return { valid: false, errors: ['Config must be an object'] };
@@ -1132,7 +1140,54 @@
         if (!s || typeof s !== 'object') { errors.push('sections[' + i + '] must be an object'); return; }
         if (typeof s.title !== 'string') errors.push('sections[' + i + '].title must be a string');
         if (!Array.isArray(s.links)) errors.push('sections[' + i + '].links must be an array');
+        if (Array.isArray(s.links)) {
+          s.links.forEach(function (lnk: any, j: number) {
+            if (!lnk || typeof lnk !== 'object') { errors.push('sections[' + i + '].links[' + j + '] must be an object'); return; }
+            if (typeof lnk.label !== 'string') errors.push('sections[' + i + '].links[' + j + '].label must be a string');
+            if (typeof lnk.url !== 'string') {
+              errors.push('sections[' + i + '].links[' + j + '].url must be a string');
+            } else if (!isSafeHttpUrl(lnk.url)) {
+              errors.push('sections[' + i + '].links[' + j + '].url must use http(s) scheme');
+            }
+          });
+        }
       });
+    }
+    // URL sanity checks for known fields
+    if (obj.google && typeof obj.google.baseUrl === 'string') {
+      if (!isSafeHttpUrl(obj.google.baseUrl)) errors.push('google.baseUrl must use http(s) scheme');
+    }
+    if (obj.go) {
+      if (typeof obj.go.homepageUrl === 'string' && !isSafeHttpUrl(obj.go.homepageUrl)) {
+        errors.push('go.homepageUrl must use http(s) scheme');
+      }
+      if (typeof obj.go.fallbackSearchUrl === 'string' && !isSafeHttpUrl(obj.go.fallbackSearchUrl)) {
+        errors.push('go.fallbackSearchUrl must use http(s) scheme');
+      }
+      if (obj.go.keyToUrl && typeof obj.go.keyToUrl === 'object') {
+        Object.keys(obj.go.keyToUrl).forEach(function (k) {
+          const v = obj.go.keyToUrl[k];
+          if (typeof v !== 'string') errors.push('go.keyToUrl[' + k + '] must be a string URL');
+          else if (!isSafeHttpUrl(v)) errors.push('go.keyToUrl[' + k + '] must use http(s) scheme');
+        });
+      }
+    }
+    if (obj.miniBrowser && typeof obj.miniBrowser.defaultUrl === 'string') {
+      if (!isSafeHttpUrl(obj.miniBrowser.defaultUrl)) errors.push('miniBrowser.defaultUrl must use http(s) scheme');
+    }
+    if (obj.backgrounds) {
+      if (Array.isArray(obj.backgrounds.light)) {
+        obj.backgrounds.light.forEach(function (u: any, idx: number) {
+          if (typeof u !== 'string') errors.push('backgrounds.light[' + idx + '] must be a string URL');
+          else if (!isSafeHttpUrl(u)) errors.push('backgrounds.light[' + idx + '] must use http(s) scheme');
+        });
+      }
+      if (Array.isArray(obj.backgrounds.dark)) {
+        obj.backgrounds.dark.forEach(function (u: any, idx: number) {
+          if (typeof u !== 'string') errors.push('backgrounds.dark[' + idx + '] must be a string URL');
+          else if (!isSafeHttpUrl(u)) errors.push('backgrounds.dark[' + idx + '] must use http(s) scheme');
+        });
+      }
     }
     return { valid: errors.length === 0, errors: errors };
   }
