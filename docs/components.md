@@ -8,7 +8,7 @@ This project is a single-page app that binds behavior to elements in `index.html
 - Populated from `config.sections`
 - Each section renders a card with a header and links
 
-Usage: change `config.sections` in your `config.js`.
+Usage: change `config.sections` in your `config.json`/`config.yaml` (or `config.js`).
 
 ## Quick Launcher
 

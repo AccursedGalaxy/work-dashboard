@@ -1,4 +1,7 @@
 config.js
+config.json
+config.yaml
+config.yml
 .DS_Store
 Thumbs.db
 node_modules/

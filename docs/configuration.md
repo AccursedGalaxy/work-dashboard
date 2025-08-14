@@ -1,10 +1,11 @@
 # Configuration reference
 
-Configuration is resolved from three sources and merged in order (later overrides earlier):
+Configuration is resolved from these sources and merged in order (later overrides earlier):
 
 1. Built-in defaults (in code)
 2. `window.DASHBOARD_DEFAULT_CONFIG` (from `config.example.js`)
-3. `window.DASHBOARD_CONFIG` (from your `config.js`)
+3. File-based config: `config.json` or `config.yaml`/`config.yml` (optional)
+4. `window.DASHBOARD_CONFIG` (from your `config.js`, optional)
 
 Later sources override earlier ones. Merge strategy:
 
@@ -13,7 +14,7 @@ Later sources override earlier ones. Merge strategy:
 - Primitive values are overwritten by the last source
 - null in a later source replaces earlier object/array values; omit the field (or use undefined) to inherit from earlier sources
 
-Only specify the fields you need to change in `config.js`.
+Only specify the fields you need to change in `config.json` or `config.yaml`/`config.yml` (or `config.js`).
 
 ## Type shape
 

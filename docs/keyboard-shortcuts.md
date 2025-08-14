@@ -20,19 +20,19 @@ Focus go/                g
 
 ## Changing shortcuts
 
-```js
-window.DASHBOARD_CONFIG = {
-  keybinds: {
-    quickLauncherOpen: 'Ctrl+Space',
-    toggleTheme: 'Shift+T',
-    focusGoogle: '/',
-    focusGo: 'g',
-    quickLauncherClose: 'Escape',
-    quickLauncherNext: 'ArrowDown',
-    quickLauncherPrev: 'ArrowUp',
-    quickLauncherOpenInTab: 'Enter'
+```json
+{
+  "keybinds": {
+    "quickLauncherOpen": "Ctrl+Space",
+    "toggleTheme": "Shift+T",
+    "focusGoogle": "/",
+    "focusGo": "g",
+    "quickLauncherClose": "Escape",
+    "quickLauncherNext": "ArrowDown",
+    "quickLauncherPrev": "ArrowUp",
+    "quickLauncherOpenInTab": "Enter"
   }
-};
+}
 ```
 
 The on-type navigation and selection inside the Quick Launcher are handled by these binds; changes apply on reload.

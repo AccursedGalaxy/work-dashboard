@@ -1,72 +1,112 @@
 (function () {
-    const defaultConfig = (window.DASHBOARD_DEFAULT_CONFIG || {});
-    const userConfig = (window.DASHBOARD_CONFIG || {});
-    const config = mergeDeep({
-        theme: 'auto',
-        google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
-        miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
-        analytics: { enableLocal: false },
-        keybinds: {
-            quickLauncherOpen: 'Mod+K',
-            toggleTheme: 't',
-            focusGoogle: '/',
-            focusGo: 'g',
-            quickLauncherClose: 'Escape',
-            quickLauncherNext: 'ArrowDown',
-            quickLauncherPrev: 'ArrowUp',
-            quickLauncherOpenInTab: 'Enter'
-        },
-        go: {
-            homepageUrl: 'https://go/',
-            fallbackSearchUrl: '',
-            keyToUrl: {
-                PAM: 'https://go/pam'
-            }
-        },
-        backgrounds: {
-            enable: true,
-            cycleMs: 15000,
-            transitionMs: 1200,
-            randomize: true,
-            light: [],
-            dark: []
-        },
-        sections: [
-            {
-                title: 'Daily',
-                links: [
-                    { label: 'Ticket Tool', url: 'https://tickets.example.com', icon: '🎫' },
-                    { label: 'GitHub Copilot', url: 'https://github.com/copilot', icon: '🤖' },
-                    { label: 'Outlook', url: 'https://outlook.office.com/mail', icon: '📧' }
-                ]
+    let config;
+    let backgroundCycler = null;
+    /**
+     * Initialize the dashboard: assemble configuration and wire up UI features.
+     *
+     * Reads default, file, and user configuration from globals (window.DASHBOARD_DEFAULT_CONFIG,
+     * window.__FILE_CONFIG__, window.DASHBOARD_CONFIG), deep-merges them with built-in defaults
+     * (fileConfig takes precedence over defaults, and userConfig overrides both), and stores the
+     * result in the module-scoped `config` variable.
+     *
+     * After merging config, this function performs global initialization side effects:
+     * - Initializes theme handling (initTheme) and binds the theme toggle.
+     * - Creates and starts the background cycler for configured backgrounds.
+     * - Renders link sections and binds Google/Go search forms.
+     * - Configures the mini-browser, global keyboard shortcuts, quick launcher, and keybinds widget.
+     * - Sets initial focus for keyboard interactions.
+     * - Sets up the PWA install prompt and registers the service worker.
+     *
+     * This function does not return a value. It relies on several global helper functions and
+     * mutates module-scoped state (notably `config` and `backgroundCycler`).
+     */
+    function start() {
+        const defaultConfig = window.DASHBOARD_DEFAULT_CONFIG || {};
+        const fileConfig = window.__FILE_CONFIG__ || {};
+        const userConfig = window.DASHBOARD_CONFIG || {};
+        config = mergeDeep({
+            theme: 'auto',
+            google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
+            miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
+            analytics: { enableLocal: false },
+            keybinds: {
+                quickLauncherOpen: 'Mod+K',
+                toggleTheme: 't',
+                focusGoogle: '/',
+                focusGo: 'g',
+                quickLauncherClose: 'Escape',
+                quickLauncherNext: 'ArrowDown',
+                quickLauncherPrev: 'ArrowUp',
+                quickLauncherOpenInTab: 'Enter'
             },
-            {
-                title: 'System Admin Pages',
-                links: [
-                    { label: 'Admin Console', url: 'https://admin.example.com', icon: '🛠️' }
-                ]
+            go: {
+                homepageUrl: 'https://go/',
+                fallbackSearchUrl: '',
+                keyToUrl: {
+                    PAM: 'https://go/pam'
+                }
             },
-            {
-                title: 'Other Pages',
-                links: [
-                    { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
-                ]
-            }
-        ]
-    }, defaultConfig, userConfig);
-    initTheme(config.theme);
-    const backgroundCycler = createBackgroundCycler(config.backgrounds);
-    bindThemeToggle(backgroundCycler);
-    renderSections(config.sections);
-    bindGoogleForm(config.google);
-    bindGoForm(config.go);
-    bindMiniBrowser(config.miniBrowser);
-    bindGlobalShortcuts(config.keybinds);
-    initQuickLauncher(config);
-    initKeybindsWidget(config.keybinds);
-    setInitialFocus();
-    initPWAInstallPrompt();
-    registerServiceWorker();
+            backgrounds: {
+                enable: true,
+                cycleMs: 15000,
+                transitionMs: 1200,
+                randomize: true,
+                light: [],
+                dark: []
+            },
+            sections: [
+                {
+                    title: 'Daily',
+                    links: [
+                        { label: 'Ticket Tool', url: 'https://tickets.example.com', icon: '🎫' },
+                        { label: 'GitHub Copilot', url: 'https://github.com/copilot', icon: '🤖' },
+                        { label: 'Outlook', url: 'https://outlook.office.com/mail', icon: '📧' }
+                    ]
+                },
+                {
+                    title: 'System Admin Pages',
+                    links: [
+                        { label: 'Admin Console', url: 'https://admin.example.com', icon: '🛠️' }
+                    ]
+                },
+                {
+                    title: 'Other Pages',
+                    links: [
+                        { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
+                    ]
+                }
+            ]
+        }, defaultConfig, fileConfig, userConfig);
+        initTheme(config.theme);
+        backgroundCycler = createBackgroundCycler(config.backgrounds);
+        bindThemeToggle(backgroundCycler);
+        renderSections(config.sections);
+        bindGoogleForm(config.google);
+        bindGoForm(config.go);
+        bindMiniBrowser(config.miniBrowser);
+        bindGlobalShortcuts(config.keybinds);
+        initQuickLauncher(config);
+        initKeybindsWidget(config.keybinds);
+        setInitialFocus();
+        initPWAInstallPrompt();
+        registerServiceWorker();
+    }
+    if (window.__CONFIG_PROMISE__ && typeof window.__CONFIG_PROMISE__.then === 'function') {
+        window.__CONFIG_PROMISE__.then(function () { start(); }, function () { start(); });
+    }
+    else {
+        start();
+    }
+    /**
+     * Deeply merges any number of plain objects into a new object.
+     *
+     * Performs a left-to-right merge: properties from later arguments override earlier ones.
+     * Nested plain objects are merged recursively. Arrays are shallow-copied (not concatenated).
+     * Non-object or falsy arguments are ignored. Inputs are not mutated; a new object is returned.
+     *
+     * @param {...Object} objs - Source objects to merge (processed left-to-right).
+     * @return {Object} The merged result.
+     */
     function mergeDeep(...objs) {
         const result = {};
         for (const obj of objs) {

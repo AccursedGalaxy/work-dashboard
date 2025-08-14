@@ -1,74 +1,98 @@
 (function () {
-  const defaultConfig = (window.DASHBOARD_DEFAULT_CONFIG || {});
-  const userConfig = (window.DASHBOARD_CONFIG || {});
-  const config = mergeDeep({
-    theme: 'auto',
-    google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
-    miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
-    analytics: { enableLocal: false },
-    keybinds: {
-      quickLauncherOpen: 'Mod+K',
-      toggleTheme: 't',
-      focusGoogle: '/',
-      focusGo: 'g',
-      quickLauncherClose: 'Escape',
-      quickLauncherNext: 'ArrowDown',
-      quickLauncherPrev: 'ArrowUp',
-      quickLauncherOpenInTab: 'Enter'
-    },
-    go: {
-      homepageUrl: 'https://go/',
-      fallbackSearchUrl: '',
-      keyToUrl: {
-        PAM: 'https://go/pam'
-      }
-    },
-    backgrounds: {
-      enable: true,
-      cycleMs: 15000,
-      transitionMs: 1200,
-      randomize: true,
-      light: [],
-      dark: []
-    },
-    sections: [
-      {
-        title: 'Daily',
-        links: [
-          { label: 'Ticket Tool', url: 'https://tickets.example.com', icon: '🎫' },
-          { label: 'GitHub Copilot', url: 'https://github.com/copilot', icon: '🤖' },
-          { label: 'Outlook', url: 'https://outlook.office.com/mail', icon: '📧' }
-        ]
+  let config: any;
+  let backgroundCycler: { setTheme: (t: string) => void } | null = null;
+  /**
+   * Build the runtime configuration by merging defaults, file-level, and user overrides, then initialize the dashboard.
+   *
+   * This performs the app startup: it composes the final `config` (deep-merged from built-in defaults, a file-provided config, and any user config on window), applies the initial theme, creates and wires the background cycler, renders link sections, binds forms and UI features (Google/Go forms, mini-browser, global shortcuts, quick launcher, keybind help), sets initial focus, and registers PWA/install and service worker hooks. Side effects include writing to global `config` and `backgroundCycler` and attaching many DOM event listeners.
+   */
+  function start() {
+    const defaultConfig = (window as any).DASHBOARD_DEFAULT_CONFIG || {};
+    const fileConfig = (window as any).__FILE_CONFIG__ || {};
+    const userConfig = (window as any).DASHBOARD_CONFIG || {};
+    config = mergeDeep({
+      theme: 'auto',
+      google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
+      miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
+      analytics: { enableLocal: false },
+      keybinds: {
+        quickLauncherOpen: 'Mod+K',
+        toggleTheme: 't',
+        focusGoogle: '/',
+        focusGo: 'g',
+        quickLauncherClose: 'Escape',
+        quickLauncherNext: 'ArrowDown',
+        quickLauncherPrev: 'ArrowUp',
+        quickLauncherOpenInTab: 'Enter'
       },
-      {
-        title: 'System Admin Pages',
-        links: [
-          { label: 'Admin Console', url: 'https://admin.example.com', icon: '🛠️' }
-        ]
+      go: {
+        homepageUrl: 'https://go/',
+        fallbackSearchUrl: '',
+        keyToUrl: {
+          PAM: 'https://go/pam'
+        }
       },
-      {
-        title: 'Other Pages',
-        links: [
-          { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
-        ]
-      }
-    ]
-  }, defaultConfig, userConfig);
+      backgrounds: {
+        enable: true,
+        cycleMs: 15000,
+        transitionMs: 1200,
+        randomize: true,
+        light: [],
+        dark: []
+      },
+      sections: [
+        {
+          title: 'Daily',
+          links: [
+            { label: 'Ticket Tool', url: 'https://tickets.example.com', icon: '🎫' },
+            { label: 'GitHub Copilot', url: 'https://github.com/copilot', icon: '🤖' },
+            { label: 'Outlook', url: 'https://outlook.office.com/mail', icon: '📧' }
+          ]
+        },
+        {
+          title: 'System Admin Pages',
+          links: [
+            { label: 'Admin Console', url: 'https://admin.example.com', icon: '🛠️' }
+          ]
+        },
+        {
+          title: 'Other Pages',
+          links: [
+            { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
+          ]
+        }
+      ]
+    }, defaultConfig, fileConfig, userConfig);
 
-  initTheme(config.theme);
-  const backgroundCycler = createBackgroundCycler(config.backgrounds);
+    initTheme(config.theme);
+      backgroundCycler = createBackgroundCycler(config.backgrounds);
   bindThemeToggle(backgroundCycler);
-  renderSections(config.sections);
-  bindGoogleForm(config.google);
-  bindGoForm(config.go);
-  bindMiniBrowser(config.miniBrowser);
-  bindGlobalShortcuts(config.keybinds);
-  initQuickLauncher(config);
-  initKeybindsWidget(config.keybinds);
-  setInitialFocus();
-  initPWAInstallPrompt();
-  registerServiceWorker();
+    renderSections(config.sections);
+    bindGoogleForm(config.google);
+    bindGoForm(config.go);
+    bindMiniBrowser(config.miniBrowser);
+    bindGlobalShortcuts(config.keybinds);
+    initQuickLauncher(config);
+    initKeybindsWidget(config.keybinds);
+    setInitialFocus();
+    initPWAInstallPrompt();
+    registerServiceWorker();
+  }
 
+  if ((window as any).__CONFIG_PROMISE__ && typeof (window as any).__CONFIG_PROMISE__.then === 'function') {
+    (window as any).__CONFIG_PROMISE__.then(function () { start(); }, function () { start(); });
+  } else {
+    start();
+  }
+
+  /**
+   * Deeply merges multiple plain objects into a new object.
+   *
+   * Merges enumerable own properties from left-to-right: nested plain objects are merged recursively, arrays are shallow-copied, and primitive values from later arguments override earlier ones. Non-object or falsy arguments are ignored. The function operates on own keys only (no prototype merging) and returns a newly created object.
+   *
+   * @param objs - Objects to merge (later objects take precedence)
+   * @returns A new object containing the merged result
+   */
   function mergeDeep(...objs: any[]) {
     const result: any = {};
     for (const obj of objs) {

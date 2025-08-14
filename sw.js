@@ -6,6 +6,7 @@ const APP_SHELL = [
     '/styles.css',
     '/app.js',
     '/config.example.js',
+    '/config-loader.js',
     '/manifest.webmanifest'
 ];
 sw.addEventListener('install', event => {
@@ -21,7 +22,7 @@ sw.addEventListener('fetch', event => {
     if (url.origin === sw.location.origin) {
         const pathname = url.pathname || '';
         // Always bypass cache for dynamic personal config (force network reload)
-        if (pathname.endsWith('/config.js')) {
+        if (pathname.endsWith('/config.js') || pathname.endsWith('/config.json') || pathname.endsWith('/config.yaml') || pathname.endsWith('/config.yml')) {
             event.respondWith(fetch(new Request(req, { cache: 'reload' })).catch(() => caches.match(req)));
             return;
         }

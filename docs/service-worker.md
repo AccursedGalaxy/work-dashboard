@@ -11,6 +11,7 @@ The service worker (`sw.js`, built from `src/sw.ts`) provides offline caching fo
   - `/styles.css`
   - `/app.js`
   - `/config.example.js`
+  - `/config-loader.js`
   - `/manifest.webmanifest`
 
 ## Lifecycle
@@ -18,7 +19,7 @@ The service worker (`sw.js`, built from `src/sw.ts`) provides offline caching fo
 - `install`: opens cache and adds app shell, then calls `skipWaiting()`
 - `activate`: removes old caches (anything not named `CACHE`) and calls `clients.claim()`
 - `fetch`:
-  - Same-origin: cache-first for static assets and wallpapers, except always fetch with `cache: 'reload'` for `/config.js`
+  - Same-origin: cache-first for static assets and wallpapers; always fetch with `cache: 'reload'` for `/config.js`, `/config.json`, `/config.yaml`, `/config.yml`
   - Cross-origin: network-first with cache fallback
 
 ## Forcing updates
