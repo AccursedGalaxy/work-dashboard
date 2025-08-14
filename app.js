@@ -1037,15 +1037,24 @@
             // Enter handling with Shift modifier for DSL
             if (e.key === 'Enter') {
                 e.preventDefault();
-                var q = input.value.trim();
-                var cmd = q ? parseCommandDsl(q, cfg) : { targets: [] };
-                if (cmd && cmd.targets && cmd.targets.length) {
-                    runCommandTargets(cmd, !!e.shiftKey, cfg);
+                var sel = currentResults[selectedIndex];
+                // If a command item is selected, run it (Shift opens all)
+                if (sel && sel.type === 'cmd' && sel.__cmd) {
+                    runCommandTargets(sel.__cmd, !!e.shiftKey, cfg);
                     close();
                     return;
                 }
-                if (currentResults[selectedIndex]) {
-                    openItem(currentResults[selectedIndex]);
+                // Otherwise prefer the selection if present
+                if (sel) {
+                    openItem(sel);
+                    return;
+                }
+                // Fallback: parse and run as command if it resolves
+                var q = input.value.trim();
+                var parsed = q ? parseCommandDsl(q, cfg) : { targets: [] };
+                if (parsed && parsed.targets && parsed.targets.length) {
+                    runCommandTargets(parsed, !!e.shiftKey, cfg);
+                    close();
                 }
             }
         });
