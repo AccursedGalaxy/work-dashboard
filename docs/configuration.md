@@ -1,6 +1,6 @@
 # Configuration reference
 
-Configuration is provided at runtime via two global objects that are deep-merged in order:
+Configuration is resolved from three sources and merged in order (later overrides earlier):
 
 1. Built-in defaults (in code)
 2. `window.DASHBOARD_DEFAULT_CONFIG` (from `config.example.js`)
