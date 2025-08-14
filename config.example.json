@@ -1,0 +1,51 @@
+{
+  "theme": "auto",
+  "keybinds": {
+    "quickLauncherOpen": "Mod+K"
+  },
+  "miniBrowser": {
+    "enable": false,
+    "defaultUrl": "https://www.google.com/webhp?igu=1"
+  },
+  "google": {
+    "baseUrl": "https://www.google.com/search",
+    "queryParam": "q",
+    "extraParams": { "igu": 1 }
+  },
+  "go": {
+    "homepageUrl": "https://go/",
+    "fallbackSearchUrl": "https://go/"
+  },
+  "backgrounds": {
+    "enable": true,
+    "cycleMs": 15000,
+    "transitionMs": 1200,
+    "randomize": true,
+    "light": [
+      "wallpapers/light/light1.jpg",
+      "wallpapers/light/light2.jpg"
+    ],
+    "dark": [
+      "wallpapers/dark/dark1.jpg",
+      "wallpapers/dark/dark2.jpg",
+      "wallpapers/dark/dark3.jpg",
+      "wallpapers/dark/dark4.png"
+    ]
+  },
+  "sections": [
+    {
+      "title": "Daily",
+      "links": [
+        { "label": "Tickets", "url": "https://tickets.example.com", "icon": "🎫" },
+        { "label": "Mail", "url": "https://outlook.office.com/mail", "icon": "📧" }
+      ]
+    },
+    {
+      "title": "Engineering",
+      "links": [
+        { "label": "Docs", "url": "https://wiki.example.com", "icon": "📚" }
+      ]
+    }
+  ]
+}
+
