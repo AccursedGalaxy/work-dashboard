@@ -68,12 +68,17 @@
     // If a hash-based override is present and valid, persist it and clear the hash; back up pre-override config
     const hashOverride = readConfigFromUrlHash();
     if (hashOverride && isPlainObject(hashOverride)) {
-      try { localStorage.setItem('config:backup', JSON.stringify(baseConfig)); } catch (_) {}
-      try { localStorage.setItem('config:override', JSON.stringify(hashOverride)); } catch (_) {}
+      const { valid, errors } = validateConfigObject(hashOverride);
+      if (valid) {
+        try { localStorage.setItem('config:backup', JSON.stringify(baseConfig)); } catch (_) {}
+        try { localStorage.setItem('config:override', JSON.stringify(hashOverride)); } catch (_) {}
+      } else {
+        try { console.warn('Ignoring invalid #config override:', errors); } catch (_) {}
+      }
+      // Always clear any #config to avoid repeated application attempts
       clearConfigHashFromUrl();
     }
     const storedOverride = readStoredOverride();
-
     config = mergeDeep(baseConfig, storedOverride || {});
 
     initTheme(config.theme);
