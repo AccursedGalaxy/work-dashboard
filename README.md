@@ -16,7 +16,7 @@ Minimal, fast, and elegant personal start page for work. It gives you:
 - **Command palette (Quick Launcher)**: Press Mod+K (Ctrl/Cmd+K) to fuzzy-search all links and `go/` keys.
 - **Google search**: Type a query and either open in the mini browser or a new tab.
 - **`go/` intranet shortcuts**: Type `go/`, `go/KEY`, or `KEY` to jump to your mapped destinations.
-- **Mini browser**: A movable, resizable embedded browser with URL bar and target select (Embed/New Tab).
+- **Mini browser**: A movable, resizable embedded browser with URL bar and target select (Embed/New Tab). You can disable it via `miniBrowser.enable`.
 - **Theming**: Auto resolves from system preference, with manual toggle and persistence.
 - **Wallpapers**: Optional image cycler with separate light/dark sets and graceful crossfade.
 - **Privacy-friendly analytics (optional)**: Local-only counts in `localStorage` to improve Quick Launcher ranking.
@@ -37,7 +37,7 @@ Then it initializes:
 - **Sections/links**: Renders cards from `config.sections` into `#linksGrid` with icons and labels.
 - **Google form**: Builds the search URL from `google.baseUrl` and `google.queryParam`; opens in mini browser or new tab.
 - **`go/` form**: Resolves keys using `go.keyToUrl`, falls back to `go.fallbackSearchUrl` if provided, or `go.homepageUrl`.
-- **Mini browser**: Initializes from `miniBrowser.defaultUrl`; Enter in the URL bar opens in embed or new tab.
+- **Mini browser**: Initializes from `miniBrowser.defaultUrl` if `miniBrowser.enable !== false`; Enter in the URL bar opens in embed or new tab.
 - **Quick Launcher**: Indexes all links and `go/` keys; fuzzy-search with scoring, keyboard navigation, and open-in-tab.
 - **Global shortcuts**: See Keyboard Shortcuts below.
 
@@ -53,6 +53,10 @@ Security-conscious defaults:
 2. Copy config and customize:
    - Copy `config.example.js` → `config.js`
    - Edit `config.js` and set your links, and wallpapers
+   - To disable the mini browser entirely, set:
+     ```js
+     window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };
+     ```
 3. Open it:
    - Easiest: open `index.html` directly in your browser
    - Recommended: serve locally for a proper origin (helps with CSP and caching)

@@ -4,7 +4,7 @@
   const config = mergeDeep({
     theme: 'auto',
     google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
-    miniBrowser: { defaultUrl: 'https://www.google.com/webhp?igu=1' },
+    miniBrowser: { enable: true, defaultUrl: 'https://www.google.com/webhp?igu=1' },
     analytics: { enableLocal: false },
     keybinds: {
       quickLauncherOpen: 'Mod+K',
@@ -280,11 +280,13 @@
       const frame = document.getElementById('mb-frame');
       const addr = document.getElementById('mb-url');
       const target = document.getElementById('mb-target');
+      const miniEnabled = !(config.miniBrowser && config.miniBrowser.enable === false);
+      if (target && !miniEnabled) { try { target.value = 'tab'; } catch (_) {} }
       const href = url.toString();
-      if (addr) addr.value = href;
+      if (addr && miniEnabled) addr.value = href;
       if (target && target.value === 'tab') {
         window.open(href, '_blank', 'noopener,noreferrer');
-      } else if (frame) {
+      } else if (frame && miniEnabled) {
         frame.src = href;
       } else {
         window.location.href = href;
@@ -306,11 +308,13 @@
       const frame = document.getElementById('mb-frame');
       const addr = document.getElementById('mb-url');
       const target = document.getElementById('mb-target');
+      const miniEnabled = !(config.miniBrowser && config.miniBrowser.enable === false);
+      if (target && !miniEnabled) { try { target.value = 'tab'; } catch (_) {} }
       function openGoUrl(href) {
-        if (addr) addr.value = href;
+        if (addr && miniEnabled) addr.value = href;
         if (target && target.value === 'tab') {
           window.open(href, '_blank', 'noopener,noreferrer');
-        } else if (frame) {
+        } else if (frame && miniEnabled) {
           frame.src = href;
         } else {
           window.location.href = href;
@@ -358,6 +362,12 @@
   }
 
   function bindMiniBrowser(miniCfg) {
+    // If explicitly disabled, hide the UI and skip initialization
+    if (miniCfg && miniCfg.enable === false) {
+      const box = document.getElementById('mini-browser');
+      if (box) box.setAttribute('hidden', '');
+      return;
+    }
     const input = document.getElementById('mb-url');
     const targetSel = document.getElementById('mb-target');
     const frame = document.getElementById('mb-frame');
