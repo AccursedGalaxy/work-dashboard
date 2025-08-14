@@ -953,9 +953,9 @@
                 li.appendChild(icon);
                 li.appendChild(label);
                 li.appendChild(meta);
-                li.addEventListener('click', function () {
+                li.addEventListener('click', function (e) {
                     if (it && it.type === 'cmd' && it.__cmd) {
-                        runCommandTargets(it.__cmd, false, cfg);
+                        runCommandTargets(it.__cmd, !!(e && e.shiftKey), cfg);
                         close();
                     }
                     else {
