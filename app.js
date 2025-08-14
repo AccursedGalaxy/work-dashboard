@@ -321,6 +321,14 @@
       }
       const key = raw.startsWith('go/') ? raw.slice(3) : raw.startsWith('go ') ? raw.slice(3) : raw;
       const resolved = resolveGoKey(goCfg, key);
+
+      // Local-only analytics: count go/ key usage to improve Quick Launcher ranking
+      if (config.analytics && config.analytics.enableLocal) {
+        try {
+          const matched = findGoKey(goCfg, key);
+          if (matched) incrementLocalCount('go:' + matched);
+        } catch (_) {}
+      }
       openGoUrl(resolved);
     });
   }
@@ -331,6 +339,12 @@
     if (foundKey) return map[foundKey];
     if (goCfg.fallbackSearchUrl) return goCfg.fallbackSearchUrl + encodeURIComponent(key);
     return goCfg.homepageUrl;
+  }
+
+  function findGoKey(goCfg, key) {
+    const map = goCfg.keyToUrl || {};
+    const foundKey = Object.keys(map).find(function (k) { return k.toLowerCase() === String(key).toLowerCase(); });
+    return foundKey || null;
   }
 
   function navigate(url) {
