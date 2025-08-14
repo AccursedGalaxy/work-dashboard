@@ -340,7 +340,16 @@
         
         const count = counts[key] | 0;
         const base = label.toLowerCase();
-        const score = fuzzyScore(qq, base) + (base.startsWith(qq) ? 2 : 0) + Math.min(5, count / 5);
+        
+        // Use more strict matching - require prefix match or meaningful fuzzy score
+        const fuzzyScoreValue = fuzzyScore(qq, base);
+        const prefixBonus = base.startsWith(qq) ? 2 : 0;
+        const hasPrefix = base.startsWith(qq);
+        
+        // Only proceed if there's a prefix match OR a very high fuzzy score (indicating strong relevance)
+        if (!hasPrefix && fuzzyScoreValue < 3) return;
+        
+        const score = fuzzyScoreValue + prefixBonus + Math.min(5, count / 5);
         
         if (score <= 0) return;
         
