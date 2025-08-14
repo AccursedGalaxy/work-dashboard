@@ -5,6 +5,7 @@
     theme: 'auto',
     google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
     miniBrowser: { defaultUrl: 'https://www.google.com/webhp?igu=1' },
+    analytics: { enableLocal: false },
     go: {
       homepageUrl: 'https://go/',
       fallbackSearchUrl: '',
@@ -51,6 +52,8 @@
   bindGoogleForm(config.google);
   bindGoForm(config.go);
   bindMiniBrowser(config.miniBrowser);
+  bindGlobalShortcuts();
+  initQuickLauncher(config);
 
   function mergeDeep() {
     const result = {};
@@ -103,6 +106,7 @@
     let timer = null;
     let images = [];
     let index = 0;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function resolveList() {
       const list = Array.isArray(cfg[currentTheme]) ? cfg[currentTheme] : [];
@@ -145,6 +149,7 @@
     function schedule() {
       if (timer) clearInterval(timer);
       if (!cfg.enable || images.length === 0) return;
+      if (reduceMotion) return; // respect prefers-reduced-motion: do not auto-cycle
       timer = setInterval(next, Math.max(3000, cfg.cycleMs | 0));
     }
 
@@ -220,6 +225,7 @@
         a.href = link.url;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
+        a.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
         const icon = document.createElement('span');
         icon.className = 'link-icon';
         icon.textContent = link.icon || '🔗';
@@ -230,6 +236,12 @@
         a.appendChild(label);
         li.appendChild(a);
         list.appendChild(li);
+
+        if (config.analytics && config.analytics.enableLocal) {
+          a.addEventListener('click', function () {
+            try { incrementLocalCount('link:' + (link.label || link.url)); } catch (_) {}
+          });
+        }
       });
       card.appendChild(header);
       card.appendChild(list);
@@ -264,6 +276,10 @@
         frame.src = href;
       } else {
         window.location.href = href;
+      }
+
+      if (config.analytics && config.analytics.enableLocal) {
+        try { incrementLocalCount('search:google'); } catch (_) {}
       }
     });
   }
@@ -354,6 +370,214 @@
       }
       handleTL.addEventListener('mousedown', onDown);
     }
+  }
+
+  // ===== Quick Launcher =====
+  function initQuickLauncher(cfg) {
+    const overlay = document.getElementById('quick-launcher');
+    const input = document.getElementById('ql-input');
+    const list = document.getElementById('ql-list');
+    if (!overlay || !input || !list) return;
+
+    const index = buildQuickLauncherIndex(cfg);
+    let currentResults = [];
+    let selectedIndex = 0;
+
+    function open() {
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      input.value = '';
+      renderResults(index, '');
+      requestAnimationFrame(function () { input.focus(); });
+    }
+    function close() {
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function renderResults(items, query) {
+      const q = query.trim();
+      const scored = q ? items.map(function (it) {
+        return { item: it, score: fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it) };
+      }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
+      scored.sort(function (a, b) { return b.score - a.score; });
+
+      // Dynamic go/ search suggestion
+      let suggestion = null;
+      if (q && cfg.go && cfg.go.fallbackSearchUrl) {
+        suggestion = {
+          id: 'go-search:' + q,
+          label: 'Search go/: ' + q,
+          icon: '🔎',
+          url: cfg.go.fallbackSearchUrl + encodeURIComponent(q),
+          type: 'go-search',
+          searchText: 'go ' + q
+        };
+      }
+
+      currentResults = (suggestion ? [suggestion] : []).concat(scored.slice(0, 50).map(function (r) { return r.item; }));
+      selectedIndex = 0;
+      list.innerHTML = '';
+      currentResults.forEach(function (it, i) {
+        const li = document.createElement('li');
+        li.className = 'ql-item';
+        li.id = 'ql-item-' + i;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', String(i === selectedIndex));
+        const icon = document.createElement('span'); icon.className = 'ql-icon'; icon.textContent = it.icon || '🔗';
+        const label = document.createElement('span'); label.className = 'ql-label'; label.textContent = it.label;
+        const meta = document.createElement('span'); meta.className = 'ql-meta'; meta.textContent = it.type === 'go' ? 'go/' : (it.section || ''); meta.style.opacity = '0.7'; meta.style.fontSize = '12px';
+        li.appendChild(icon); li.appendChild(label); li.appendChild(meta);
+        li.addEventListener('click', function () { openItem(it); });
+        list.appendChild(li);
+      });
+    }
+
+    function popularityBoost(it) {
+      if (!(cfg.analytics && cfg.analytics.enableLocal)) return 0;
+      try {
+        const map = readCounts();
+        const key = it.type === 'go' ? ('go:' + it.label) : ('link:' + it.label);
+        const c = map[key] || 0;
+        return Math.min(5, c / 5);
+      } catch (_) { return 0; }
+    }
+
+    function prefixBoost(q, it) {
+      const qt = q.toLowerCase();
+      return (it.searchText.startsWith(qt) ? 2 : 0);
+    }
+
+    function openItem(it) {
+      if (cfg.analytics && cfg.analytics.enableLocal) {
+        try { incrementLocalCount((it.type === 'go' ? 'go:' : 'link:') + it.label); } catch (_) {}
+      }
+      window.open(it.url, '_blank', 'noopener,noreferrer');
+      close();
+    }
+
+    input.addEventListener('input', function () { renderResults(index, input.value); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); move(1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); return; }
+      if (e.key === 'Enter') { e.preventDefault(); if (currentResults[selectedIndex]) openItem(currentResults[selectedIndex]); }
+    });
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+
+    function move(delta) {
+      if (!currentResults.length) return;
+      const last = selectedIndex;
+      selectedIndex = (selectedIndex + delta + currentResults.length) % currentResults.length;
+      const prev = document.getElementById('ql-item-' + last);
+      const next = document.getElementById('ql-item-' + selectedIndex);
+      if (prev) prev.setAttribute('aria-selected', 'false');
+      if (next) { next.setAttribute('aria-selected', 'true'); next.scrollIntoView({ block: 'nearest' }); }
+    }
+
+    function buildQuickLauncherIndex(cfg) {
+      const items = [];
+      (cfg.sections || []).forEach(function (section) {
+        (section.links || []).forEach(function (link) {
+          items.push({
+            id: 'link:' + (link.label || link.url),
+            label: link.label || link.url,
+            icon: link.icon || '🔗',
+            url: link.url,
+            type: 'link',
+            section: section.title || '',
+            searchText: [(link.label || ''), section.title || '', (link.url || '')].join(' ').toLowerCase()
+          });
+        });
+      });
+      if (cfg.go && cfg.go.keyToUrl) {
+        Object.keys(cfg.go.keyToUrl).forEach(function (key) {
+          items.push({
+            id: 'go:' + key,
+            label: key,
+            icon: '🏷️',
+            url: cfg.go.keyToUrl[key],
+            type: 'go',
+            section: 'go/',
+            searchText: ('go ' + key + ' ' + cfg.go.keyToUrl[key]).toLowerCase()
+          });
+        });
+      }
+      return items;
+    }
+
+    // Expose for shortcut handler
+    window.__openQuickLauncher = open;
+    window.__closeQuickLauncher = close;
+  }
+
+  function fuzzyScore(query, text) {
+    if (!query) return 1;
+    const q = query.toLowerCase();
+    const t = text.toLowerCase();
+    let qi = 0, score = 0, streak = 0;
+    for (let i = 0; i < t.length && qi < q.length; i++) {
+      if (t[i] === q[qi]) { score += 1 + streak * 0.2; qi++; streak++; } else { streak = 0; }
+    }
+    if (qi < q.length) return 0; // not all chars matched in order
+    // Prefix and whole-word boost
+    if (t.startsWith(q)) score += 2;
+    return score;
+  }
+
+  function bindGlobalShortcuts() {
+    document.addEventListener('keydown', function (e) {
+      if (isTypingInInput(e)) return;
+      // Ctrl/Cmd+K -> quick launcher
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        var overlay = document.getElementById('quick-launcher');
+        if (overlay && overlay.classList.contains('is-open')) {
+          if (window.__closeQuickLauncher) window.__closeQuickLauncher();
+        } else {
+          if (window.__openQuickLauncher) window.__openQuickLauncher();
+        }
+        return;
+      }
+      // '/' focuses Google search
+      if (e.key === '/') {
+        const g = document.getElementById('googleQuery');
+        if (g) { e.preventDefault(); g.focus(); }
+        return;
+      }
+      // 'g' focuses go box
+      if (e.key === 'g' || e.key === 'G') {
+        const go = document.getElementById('goQuery');
+        if (go) { e.preventDefault(); go.focus(); }
+        return;
+      }
+      // 't' toggles theme
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        toggleTheme(backgroundCycler);
+      }
+    });
+  }
+
+  function isTypingInInput(e) {
+    const el = e.target;
+    if (!el) return false;
+    const tag = String(el.tagName || '').toLowerCase();
+    const editable = el.isContentEditable;
+    return editable || tag === 'input' || tag === 'textarea' || tag === 'select';
+  }
+
+  // ===== Local analytics (optional, localStorage only) =====
+  function incrementLocalCount(key) {
+    const map = readCounts();
+    map[key] = (map[key] || 0) + 1;
+    localStorage.setItem('analytics:counts', JSON.stringify(map));
+  }
+  function readCounts() {
+    try {
+      const raw = localStorage.getItem('analytics:counts');
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) { return {}; }
   }
 })();
 

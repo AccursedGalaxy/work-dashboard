@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self'; frame-src 'self' https: about:; form-action 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; upgrade-insecure-requests; block-all-mixed-content">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Work Dashboard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
@@ -25,18 +27,21 @@
       <div class="card">
         <h2>Google Search</h2>
         <form id="googleForm" class="search-form" autocomplete="off">
-          <input id="googleQuery" name="q" type="search" placeholder="Search Google" inputmode="search" aria-label="Search Google">
+          <label for="googleQuery" class="sr-only">Google search query</label>
+          <input id="googleQuery" name="q" type="search" placeholder="Search Google" inputmode="search" aria-describedby="googleHelp">
           <button type="submit">Search</button>
         </form>
+        <p id="googleHelp" class="sr-only">Type your query and press Enter to search Google. Tip: press / to focus this box.</p>
       </div>
 
       <div class="card">
         <h2>go/ Intranet</h2>
         <form id="goForm" class="search-form" autocomplete="off">
-          <input id="goQuery" name="go" type="text" placeholder="go/ or go/KEYWORD or KEYWORD" aria-label="Search go/ intranet">
+          <label for="goQuery" class="sr-only">Enter go/ key or keyword</label>
+          <input id="goQuery" name="go" type="text" placeholder="go/ or go/KEYWORD or KEYWORD" aria-describedby="goHelp">
           <button type="submit">Go</button>
         </form>
-        <p class="hint">Examples: <code>go/</code>, <code>go/PAM</code>, <code>PAM</code></p>
+        <p id="goHelp" class="hint">Examples: <code>go/</code>, <code>go/PAM</code>, <code>PAM</code></p>
       </div>
     </section>
 
@@ -50,18 +55,28 @@
     <p>Edit your links in <code>config.js</code> (copy from <code>config.example.js</code>).</p>
   </footer>
 
-  <div id="mini-browser" style="position: fixed; bottom: 16px; right: 16px; width: 560px; height: 420px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35); overflow: hidden; resize: both;">
-    <div id="mb-resize-tl" aria-hidden="true" style="position:absolute; top:0; left:0; width:14px; height:14px; cursor:nwse-resize; z-index:2;"></div>
-    <div style="display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; background:#1b1b1b;">
-      <strong style="font: 600 12px system-ui;">Mini Browser</strong>
-      <select id="mb-target" title="Where to open" style="font:12px system-ui; background:#0f0f0f; color:#ddd; border:1px solid #333; border-radius:6px; padding:.3rem .4rem;">
+  <!-- Quick Launcher (Ctrl/Cmd+K) -->
+  <div id="quick-launcher" class="ql-overlay" role="dialog" aria-modal="true" aria-labelledby="ql-label" aria-hidden="true">
+    <div class="ql-panel">
+      <label id="ql-label" class="sr-only" for="ql-input">Quick launcher search</label>
+      <input id="ql-input" class="ql-input" type="text" placeholder="Search links and go keys…" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="ql-list" />
+      <div class="ql-divider"></div>
+      <ul id="ql-list" class="ql-list" role="listbox" aria-label="Quick launcher results"></ul>
+    </div>
+  </div>
+
+  <div id="mini-browser" class="mini-browser">
+    <div id="mb-resize-tl" class="mb-resize-tl" aria-hidden="true"></div>
+    <div class="mini-browser-bar">
+      <strong class="mini-browser-title">Mini Browser</strong>
+      <select id="mb-target" class="mini-browser-select" title="Where to open">
         <option value="embed">Embed</option>
         <option value="tab" selected>New Tab</option>
       </select>
-      <input id="mb-url" type="text" value="" style="flex:1; font: 12px system-ui; background:#0f0f0f; color:#ddd; border:1px solid #333; border-radius:6px; padding:.35rem .5rem;" />
+      <input id="mb-url" class="mini-browser-input" type="text" value="" aria-label="Mini browser URL" />
     </div>
 
-    <iframe id="mb-frame" src="about:blank" title="Mini Browser" style="border:0; width:100%; height:calc(100% - 40px); background:#fff;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; geolocation; picture-in-picture; web-share" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-same-origin"></iframe>
+    <iframe id="mb-frame" class="mini-browser-frame" src="about:blank" title="Mini Browser" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; geolocation; picture-in-picture; web-share" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
   </div>
 </body>
 </html>
