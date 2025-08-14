@@ -953,6 +953,29 @@
         return { item: it, score: baseScore + exactMatchBoost + strongPrefixBoost, type: 'regular' };
       }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it), type: 'regular' }; });
 
+      // If the typed text resolves as a command, include it explicitly as a first-class suggestion
+      let typedCommandScored: any[] = [];
+      if (q) {
+        const parsedTyped = parseCommandDsl(q, cfg);
+        if (parsedTyped && parsedTyped.targets && parsedTyped.targets.length) {
+          const first = parsedTyped.targets[0];
+          const typedItem = {
+            id: 'cmd:' + q,
+            label: q,
+            icon: (first && first.icon) || '🔗',
+            url: (first && first.url) || '',
+            type: 'cmd',
+            section: 'command',
+            searchText: q.toLowerCase(),
+            __cmd: parsedTyped
+          };
+          const baseScore = fuzzyScore(q, typedItem.searchText) + popularityBoost(typedItem) + prefixBoost(q, typedItem);
+          const exactMatchBoost = 20;
+          const strongPrefixBoost = 10;
+          typedCommandScored = [{ item: typedItem, score: baseScore + exactMatchBoost + strongPrefixBoost, type: 'cmd-typed' }];
+        }
+      }
+
       // Get smart command suggestions and score them
       const learned = q ? getLearnedCommandSuggestions(q, cfg) : [];
       const scoredLearned = learned.map(function (it) {
@@ -977,11 +1000,21 @@
       }
 
       // Combine and sort all results by score (smart suggestions now compete fairly with regular items)
-      const allScored = scored.concat(scoredLearned);
+      const allScored = scored.concat(typedCommandScored, scoredLearned);
       allScored.sort(function (a, b) { return b.score - a.score; });
 
+      // Dedupe by id (or label fallback) so the typed command doesn't duplicate a learned suggestion
+      const seen = new Set<string>();
+      const deduped: any[] = [];
+      for (const r of allScored) {
+        const key = (r.item && typeof r.item.id === 'string') ? r.item.id : (r.item && r.item.label) ? r.item.label : String(Math.random());
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(r);
+      }
+
       // Build final results list with top scored items
-      currentResults = allScored.slice(0, 50).map(function (r) { return r.item; });
+      currentResults = deduped.slice(0, 50).map(function (r) { return r.item; });
       if (suggestion) currentResults.push(suggestion);
       selectedIndex = 0;
       list.innerHTML = '';
