@@ -148,8 +148,10 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
+  margin-block: 16px;
   content-visibility: auto;
-  contain: content;
+  contain: layout;
+  overflow: visible;
 }
 
 .card {
@@ -159,14 +161,17 @@ body {
   padding: 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.25);
   backdrop-filter: saturate(140%) blur(8px);
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  transform-origin: top center;
+  will-change: transform, box-shadow, border-color, background-color;
+  transition: transform 220ms cubic-bezier(.2,.7,.2,1), box-shadow 220ms cubic-bezier(.2,.7,.2,1), border-color 220ms cubic-bezier(.2,.7,.2,1), background-color 220ms cubic-bezier(.2,.7,.2,1);
 }
 [data-theme="light"] .card {
   background: rgba(255,255,255,0.7);
   border-color: rgba(230, 237, 243, 0.8);
   box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
-.card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+[data-theme="light"] .card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+.card:hover { transform: translateY(-2px) scale(1.005); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 [data-theme="light"] .card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
 .card h2 { margin: 0 0 12px; font-size: 16px; }
 .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
@@ -188,20 +193,24 @@ body {
   border-radius: 10px;
   padding: 10px 14px;
   cursor: pointer;
+  transition: transform 180ms cubic-bezier(.2,.7,.2,1), filter 180ms cubic-bezier(.2,.7,.2,1), box-shadow 180ms cubic-bezier(.2,.7,.2,1);
 }
-.search-form button:hover { filter: brightness(1.05); }
+.search-form button:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,0.28); }
 
 .links-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 12px;
+  gap: 25px;
+  margin-block: 25px;
   /* Heavy grid: allow the browser to skip offscreen rendering */
   content-visibility: auto;
-  contain: content;
+  contain: layout;
+  overflow: visible;
 }
 
 .section-card { padding: 0; }
+.section-card .links-list { padding-top: 12px; }
+.section-card:hover { transform: translateY(0) scale(1.003); }
 .section-header { padding: 12px 16px; border-bottom: 1px solid var(--card-border); font-weight: 600; }
 .links-list { list-style: none; margin: 0; padding: 8px; display: grid; gap: 8px; }
 .link-item a {
@@ -215,9 +224,12 @@ body {
   text-decoration: none;
   background: rgba(18,24,33,0.55);
   backdrop-filter: blur(6px);
+  transition: transform 180ms cubic-bezier(.2,.7,.2,1), border-color 180ms cubic-bezier(.2,.7,.2,1), background-color 180ms cubic-bezier(.2,.7,.2,1), box-shadow 180ms cubic-bezier(.2,.7,.2,1);
 }
 [data-theme="light"] .link-item a { background: rgba(255,255,255,0.6); }
-.link-item a:hover { border-color: var(--link); }
+.link-item a:hover { border-color: var(--link); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,0.26); }
+.section-card .link-item a:hover,
+.section-card .link-item a:focus-visible { transform: translateY(0); }
 .link-icon { width: 22px; height: 22px; display: grid; place-items: center; }
 .link-label { flex: 1; }
 
