@@ -6,6 +6,16 @@
     google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
     miniBrowser: { defaultUrl: 'https://www.google.com/webhp?igu=1' },
     analytics: { enableLocal: false },
+    keybinds: {
+      quickLauncherOpen: 'Mod+K',
+      toggleTheme: 't',
+      focusGoogle: '/',
+      focusGo: 'g',
+      quickLauncherClose: 'Escape',
+      quickLauncherNext: 'ArrowDown',
+      quickLauncherPrev: 'ArrowUp',
+      quickLauncherOpenInTab: 'Enter'
+    },
     go: {
       homepageUrl: 'https://go/',
       fallbackSearchUrl: '',
@@ -52,8 +62,9 @@
   bindGoogleForm(config.google);
   bindGoForm(config.go);
   bindMiniBrowser(config.miniBrowser);
-  bindGlobalShortcuts();
+  bindGlobalShortcuts(config.keybinds);
   initQuickLauncher(config);
+  initKeybindsWidget(config.keybinds);
 
   function mergeDeep() {
     const result = {};
@@ -458,10 +469,10 @@
 
     input.addEventListener('input', function () { renderResults(index, input.value); });
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); move(1); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); return; }
-      if (e.key === 'Enter') { e.preventDefault(); if (currentResults[selectedIndex]) openItem(currentResults[selectedIndex]); }
+      if (matchesKey(e, cfg.keybinds.quickLauncherClose)) { e.preventDefault(); close(); return; }
+      if (matchesKey(e, cfg.keybinds.quickLauncherNext)) { e.preventDefault(); move(1); return; }
+      if (matchesKey(e, cfg.keybinds.quickLauncherPrev)) { e.preventDefault(); move(-1); return; }
+      if (matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) { e.preventDefault(); if (currentResults[selectedIndex]) openItem(currentResults[selectedIndex]); }
     });
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
 
@@ -525,11 +536,11 @@
     return score;
   }
 
-  function bindGlobalShortcuts() {
+  function bindGlobalShortcuts(keys) {
     document.addEventListener('keydown', function (e) {
       if (isTypingInInput(e)) return;
-      // Ctrl/Cmd+K -> quick launcher
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      // Open/close quick launcher
+      if (matchesKey(e, keys.quickLauncherOpen)) {
         e.preventDefault();
         var overlay = document.getElementById('quick-launcher');
         if (overlay && overlay.classList.contains('is-open')) {
@@ -539,24 +550,104 @@
         }
         return;
       }
-      // '/' focuses Google search
-      if (e.key === '/') {
+      // Focus Google
+      if (matchesKey(e, keys.focusGoogle)) {
         const g = document.getElementById('googleQuery');
         if (g) { e.preventDefault(); g.focus(); }
         return;
       }
-      // 'g' focuses go box
-      if (e.key === 'g' || e.key === 'G') {
+      // Focus go box
+      if (matchesKey(e, keys.focusGo)) {
         const go = document.getElementById('goQuery');
         if (go) { e.preventDefault(); go.focus(); }
         return;
       }
-      // 't' toggles theme
-      if (e.key === 't' || e.key === 'T') {
+      // Toggle theme
+      if (matchesKey(e, keys.toggleTheme)) {
         e.preventDefault();
         toggleTheme(backgroundCycler);
       }
     });
+  }
+
+  // Key matching helper: supports 'Mod' (Ctrl/Cmd), Shift, Alt, single keys
+  function matchesKey(e, def) {
+    if (!def) return false;
+    const parts = String(def).split('+');
+    let needMod = false, needShift = false, needAlt = false, needCtrl = false, needMeta = false;
+    let keyPart = null;
+    parts.forEach(function (p) {
+      const token = p.trim();
+      if (!token) return;
+      const low = token.toLowerCase();
+      if (low === 'mod') { needMod = true; }
+      else if (low === 'shift') { needShift = true; }
+      else if (low === 'alt' || low === 'option') { needAlt = true; }
+      else if (low === 'ctrl' || low === 'control') { needCtrl = true; }
+      else if (low === 'cmd' || low === 'meta') { needMeta = true; }
+      else { keyPart = token; }
+    });
+    const key = normalizeKey(e.key);
+    const expected = keyPart ? normalizeKey(keyPart) : null;
+    const modOk = needMod ? (e.ctrlKey || e.metaKey) : true;
+    const ctrlOk = needCtrl ? e.ctrlKey : true;
+    const metaOk = needMeta ? e.metaKey : true;
+    const shiftOk = needShift ? e.shiftKey : true;
+    const altOk = needAlt ? e.altKey : true;
+    const keyOk = expected ? (key === expected) : true;
+    return modOk && ctrlOk && metaOk && shiftOk && altOk && keyOk;
+  }
+
+  function normalizeKey(k) {
+    if (!k) return '';
+    const map = { 'Esc': 'Escape', 'Spacebar': ' ', 'ArrowUp': 'ArrowUp', 'ArrowDown': 'ArrowDown', 'ArrowLeft': 'ArrowLeft', 'ArrowRight': 'ArrowRight' };
+    const std = map[k] || k;
+    if (std.length === 1) return std.toLowerCase();
+    return std;
+  }
+
+  function initKeybindsWidget(keys) {
+    const fab = document.getElementById('kb-fab');
+    const overlay = document.getElementById('kb-overlay');
+    const closeBtn = document.getElementById('kb-close');
+    const list = document.getElementById('kb-list');
+    if (!fab || !overlay || !closeBtn || !list) return;
+
+    const items = [
+      { label: 'Open quick launcher', combo: keys.quickLauncherOpen },
+      { label: 'Close quick launcher', combo: keys.quickLauncherClose },
+      { label: 'Next result', combo: keys.quickLauncherNext },
+      { label: 'Previous result', combo: keys.quickLauncherPrev },
+      { label: 'Open selection', combo: keys.quickLauncherOpenInTab },
+      { label: 'Toggle theme', combo: keys.toggleTheme },
+      { label: 'Focus Google', combo: keys.focusGoogle },
+      { label: 'Focus go/', combo: keys.focusGo }
+    ];
+    list.innerHTML = '';
+    items.forEach(function (it) {
+      const li = document.createElement('li');
+      const label = document.createElement('div'); label.className = 'kb-label'; label.textContent = it.label;
+      const keysEl = document.createElement('div'); keysEl.className = 'kb-keys'; keysEl.innerHTML = renderCombo(it.combo);
+      li.appendChild(label); li.appendChild(keysEl);
+      list.appendChild(li);
+    });
+
+    function open() { overlay.removeAttribute('hidden'); }
+    function close() { overlay.setAttribute('hidden', ''); }
+
+    fab.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) { if (!overlay.hasAttribute('hidden') && e.key === 'Escape') close(); });
+  }
+
+  function renderCombo(combo) {
+    if (!combo) return '';
+    return combo.split('+').map(function (p) { return '<kbd>' + escapeHtml(p.trim()) + '</kbd>'; }).join(' + ');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'})[c]; });
   }
 
   function isTypingInInput(e) {

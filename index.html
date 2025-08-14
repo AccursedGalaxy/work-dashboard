@@ -51,10 +51,6 @@
     </section>
   </main>
 
-  <footer class="site-footer">
-    <p>Edit your links in <code>config.js</code> (copy from <code>config.example.js</code>).</p>
-  </footer>
-
   <!-- Quick Launcher (Ctrl/Cmd+K) -->
   <div id="quick-launcher" class="ql-overlay" role="dialog" aria-modal="true" aria-labelledby="ql-label" aria-hidden="true">
     <div class="ql-panel">
@@ -77,6 +73,18 @@
     </div>
 
     <iframe id="mb-frame" class="mini-browser-frame" src="about:blank" title="Mini Browser" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; geolocation; picture-in-picture; web-share" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+  </div>
+
+  <!-- Keyboard Shortcuts Floating Button + Modal -->
+  <button id="kb-fab" class="kb-fab" aria-label="Show keyboard shortcuts" title="Keyboard shortcuts">⌨️</button>
+  <div id="kb-overlay" class="kb-overlay" role="dialog" aria-modal="true" aria-labelledby="kb-title" hidden>
+    <div class="kb-panel">
+      <div class="kb-head">
+        <h3 id="kb-title">Keyboard shortcuts</h3>
+        <button id="kb-close" class="kb-close" aria-label="Close">✕</button>
+      </div>
+      <ul id="kb-list" class="kb-grid"></ul>
+    </div>
   </div>
 </body>
 </html>

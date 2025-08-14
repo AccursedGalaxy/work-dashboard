@@ -4,6 +4,16 @@
 
 window.DASHBOARD_DEFAULT_CONFIG = {
   theme: 'auto', // 'dark' | 'light' | 'auto'
+  keybinds: {
+    quickLauncherOpen: 'Mod+K',
+    toggleTheme: 't',
+    focusGoogle: '/',
+    focusGo: 'g',
+    quickLauncherClose: 'Escape',
+    quickLauncherNext: 'ArrowDown',
+    quickLauncherPrev: 'ArrowUp',
+    quickLauncherOpenInTab: 'Enter'
+  },
   backgrounds: {
     // Place your images under a local `wallpapers/` folder or use full URLs
     enable: true,
