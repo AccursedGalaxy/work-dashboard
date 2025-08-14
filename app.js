@@ -61,7 +61,33 @@
                         { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
                     ]
                 }
-            ]
+            ],
+            commandDsl: {
+                templates: {
+                    'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
+                    'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
+                    'gh code {q}': 'https://github.com/search?q={urlencode(q)}&type=code',
+                    'gh {owner}/{repo}': 'https://github.com/{owner}/{repo}',
+                    'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
+                    'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
+                    'yt {q}': 'https://www.youtube.com/results?search_query={urlencode(q)}',
+                    'aur {q}': 'https://aur.archlinux.org/packages?K={urlencode(q)}',
+                    'wiki {q}': 'https://en.wikipedia.org/w/index.php?search={urlencode(q)}',
+                    'r/{sub}': 'https://www.reddit.com/r/{sub}/',
+                    'npm {pkg}': 'https://www.npmjs.com/package/{pkg}',
+                    'unpkg {pkg}': 'https://unpkg.com/browse/{pkg}/',
+                    'bp {pkg}': 'https://bundlephobia.com/package/{pkg}',
+                    'go {key}': ''
+                },
+                macros: {
+                    'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}']
+                },
+                defaults: {
+                    defaultRepo: '',
+                    defaultTrackerPrefix: '',
+                    trackerUrl: ''
+                }
+            }
         }, defaultConfig, fileConfig, userConfig);
         initTheme(config.theme);
         backgroundCycler = createBackgroundCycler(config.backgrounds);
@@ -412,6 +438,317 @@
     function navigate(url) {
         window.location.href = url;
     }
+    // ===== Command DSL helpers =====
+    function normalizeSmartQuotes(s) {
+        return String(s || '')
+            .replace(/[“”]/g, '"')
+            .replace(/[‘’]/g, "'");
+    }
+    function tokenizeCommand(input) {
+        var s = normalizeSmartQuotes(input).trim();
+        var tokens = [];
+        var cur = '';
+        var inSingle = false, inDouble = false, esc = false;
+        for (var i = 0; i < s.length; i++) {
+            var ch = s[i];
+            if (esc) { cur += ch; esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"' && !inSingle) { inDouble = !inDouble; continue; }
+            if (ch === "'" && !inDouble) { inSingle = !inSingle; continue; }
+            if (!inSingle && !inDouble && /\s/.test(ch)) {
+                if (cur) tokens.push(cur), cur = '';
+                continue;
+            }
+            cur += ch;
+        }
+        if (cur) tokens.push(cur);
+        return tokens;
+    }
+    function kebabCase(s) {
+        return String(s || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '-')
+            .replace(/--+/g, '-');
+    }
+    function applyTransforms(fnName, value) {
+        var v = value == null ? '' : String(value);
+        var name = String(fnName || '').toLowerCase();
+        if (name === 'urlencode') return encodeURIComponent(v);
+        if (name === 'lower') return v.toLowerCase();
+        if (name === 'kebab') return kebabCase(v);
+        return v;
+    }
+    function evalTemplateExpr(expr, vars) {
+        // Supports: varName, func(varName), nested like urlencode(lower(varName))
+        var s = expr.trim();
+        // Nested function parsing: find outermost function call
+        var m = /^([a-zA-Z_][a-zA-Z0-9_]*)\((.*)\)$/.exec(s);
+        if (m) {
+            var fn = m[1];
+            var inner = m[2];
+            var innerVal = evalTemplateExpr(inner, vars);
+            return applyTransforms(fn, innerVal);
+        }
+        // Plain variable
+        var key = s.trim();
+        return vars.hasOwnProperty(key) ? String(vars[key]) : '';
+    }
+    function interpolateUrl(tpl, vars) {
+        return String(tpl).replace(/\{([^}]+)\}/g, function (_, expr) { return evalTemplateExpr(expr, vars); });
+    }
+    function buildTokenRegexFromPatternToken(patternToken) {
+        // Convert a single pattern token (no spaces) into a regex that captures placeholders {var}
+        var out = '';
+        for (var i = 0; i < patternToken.length; i++) {
+            var ch = patternToken[i];
+            if (ch === '{') {
+                var j = patternToken.indexOf('}', i + 1);
+                if (j === -1) { out += '\\{'; continue; }
+                var varName = patternToken.slice(i + 1, j).trim();
+                // If token contains '/', limit var to any char except '/'; otherwise, no spaces
+                var needsSlashAware = patternToken.indexOf('/') !== -1;
+                out += needsSlashAware ? '([^/]+)' : '([^\n\r\t ]+)';
+                i = j;
+            } else {
+                // escape regex special chars
+                if (/[-/\\^$*+?.()|[\]{}]/.test(ch)) out += '\\' + ch; else out += ch;
+            }
+        }
+        return new RegExp('^' + out + '$');
+    }
+    function matchPattern(pattern, inputTokens) {
+        // Returns { ok: boolean, vars: object, usedTokens: number }
+        var p = String(pattern).trim();
+        var pTokens = p.split(/\s+/);
+        var vars = {};
+        // Support last-token rest capture when the last pattern token is a bare placeholder like {q}
+        var lastToken = pTokens[pTokens.length - 1] || '';
+        var lastBarePlaceholder = /^\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}$/.exec(lastToken);
+        if (lastBarePlaceholder) {
+            if (inputTokens.length < pTokens.length - 1) return { ok: false };
+            for (var i = 0; i < pTokens.length - 1; i++) {
+                var re = buildTokenRegexFromPatternToken(pTokens[i]);
+                var m = re.exec(inputTokens[i] || '');
+                if (!m) return { ok: false };
+                // collect vars in order of placeholders
+                var varNames = (pTokens[i].match(/\{([^}]+)\}/g) || []).map(function (x) { return x.slice(1, -1).trim(); });
+                for (var k = 0; k < varNames.length; k++) vars[varNames[k]] = m[k + 1];
+            }
+            var rest = inputTokens.slice(pTokens.length - 1).join(' ').trim();
+            vars[lastBarePlaceholder[1]] = rest;
+            return { ok: true, vars: vars, usedTokens: inputTokens.length };
+        } else {
+            if (inputTokens.length !== pTokens.length) return { ok: false };
+            for (var j = 0; j < pTokens.length; j++) {
+                var re2 = buildTokenRegexFromPatternToken(pTokens[j]);
+                var m2 = re2.exec(inputTokens[j] || '');
+                if (!m2) return { ok: false };
+                var varNames2 = (pTokens[j].match(/\{([^}]+)\}/g) || []).map(function (x) { return x.slice(1, -1).trim(); });
+                for (var k2 = 0; k2 < varNames2.length; k2++) vars[varNames2[k2]] = m2[k2 + 1];
+            }
+            return { ok: true, vars: vars, usedTokens: pTokens.length };
+        }
+    }
+    function parseCommandSegment(segment, cfg) {
+        var raw = String(segment || '').trim();
+        if (!raw) return [];
+        var dsl = (cfg && cfg.commandDsl) || {};
+        var templates = (dsl && dsl.templates) || {};
+        var macros = (dsl && dsl.macros) || {};
+        var defaults = (dsl && dsl.defaults) || {};
+        var tokens = tokenizeCommand(raw);
+        if (!tokens.length) return [];
+        // Special: go alias uses existing resolver
+        if (tokens[0].toLowerCase() === 'go') {
+            var key = tokens.slice(1).join(' ').trim();
+            if (!key) return [];
+            var href = resolveGoKey(cfg.go || {}, key);
+            return [{ kind: 'url', label: 'go ' + key, url: href, icon: '🏷️' }];
+        }
+        // Shorthand: pr NUM using defaultRepo
+        if (/^pr$/i.test(tokens[0]) && tokens[1] && /^\d+$/.test(tokens[1]) && defaults && defaults.defaultRepo) {
+            var repo = String(defaults.defaultRepo);
+            var url = 'https://github.com/' + repo + '/pull/' + tokens[1];
+            return [{ kind: 'url', label: 'PR #' + tokens[1] + ' in ' + repo, url: url, icon: '🔀' }];
+        }
+        // Shorthand: tracker like ABC-123
+        var trackerId = null;
+        var joined = tokens.join(' ');
+        var prefix = (defaults && defaults.defaultTrackerPrefix) ? String(defaults.defaultTrackerPrefix) : '';
+        var trackerUrl = (defaults && defaults.trackerUrl) ? String(defaults.trackerUrl) : '';
+        var trackerMatch = /\b([A-Za-z]+-\d+)\b/.exec(joined);
+        if (trackerUrl && (trackerMatch || (prefix && joined.toUpperCase().startsWith(prefix.toUpperCase())))) {
+            if (trackerMatch) trackerId = trackerMatch[1];
+            else trackerId = joined.trim();
+            var tid = trackerId.toUpperCase();
+            var tUrl = interpolateUrl(trackerUrl, { id: tid });
+            return [{ kind: 'url', label: tid, url: tUrl, icon: '🎫' }];
+        }
+        // Macros expansion
+        for (var macroPattern in macros) {
+            if (!Object.prototype.hasOwnProperty.call(macros, macroPattern)) continue;
+            var r = matchPattern(macroPattern, tokens);
+            if (r && r.ok) {
+                var expansions = macros[macroPattern] || [];
+                var outs = [];
+                for (var ei = 0; ei < expansions.length; ei++) {
+                    var expanded = interpolateUrl(expansions[ei], r.vars);
+                    // Recurse parse expanded into concrete URLs
+                    var sub = parseCommandSegment(expanded, cfg);
+                    for (var si = 0; si < sub.length; si++) outs.push(sub[si]);
+                }
+                if (outs.length) return outs;
+            }
+        }
+        // Templates matching
+        var candidates = Object.keys(templates);
+        for (var i = 0; i < candidates.length; i++) {
+            var pat = candidates[i];
+            var res = matchPattern(pat, tokens);
+            if (res && res.ok) {
+                var tpl = templates[pat];
+                // Special-case: empty URL signals handler (e.g., go {key})
+                if (tpl === '' && /^go\s+\{/.test(pat)) {
+                    var key2 = res.vars.key || '';
+                    var href2 = resolveGoKey(cfg.go || {}, key2);
+                    return [{ kind: 'url', label: 'go ' + key2, url: href2, icon: '🏷️' }];
+                }
+                var href3 = interpolateUrl(tpl, res.vars);
+                return [{ kind: 'url', label: raw, url: href3, icon: '⚡' }];
+            }
+        }
+        // Action: time N (minutes)
+        if (/^time$/i.test(tokens[0]) && tokens[1] && /^\d+$/.test(tokens[1])) {
+            return [{ kind: 'action', action: 'timer', minutes: parseInt(tokens[1], 10), label: 'Focus ' + tokens[1] + ' min', icon: '⏱️' }];
+        }
+        return [];
+    }
+    function parseCommandDsl(raw, cfg) {
+        var text = String(raw || '').trim();
+        if (!text) return { targets: [], label: '' };
+        var parts = text.split('|').map(function (p) { return p.trim(); }).filter(Boolean);
+        var all = [];
+        for (var i = 0; i < parts.length; i++) {
+            var segTargets = parseCommandSegment(parts[i], cfg);
+            for (var j = 0; j < segTargets.length; j++) all.push(segTargets[j]);
+        }
+        return { targets: all, label: text };
+    }
+    function runCommandTargets(cmd, openAll, cfg) {
+        var targets = (cmd && cmd.targets) || [];
+        if (!targets.length) return;
+        // analytics for commands
+        if (config.analytics && config.analytics.enableLocal) {
+            try { incrementLocalCount('cmd:' + (cmd.label || '')); } catch (_) { }
+        }
+        var toOpen = openAll ? targets : [targets[0]];
+        for (var i = 0; i < toOpen.length; i++) {
+            var t = toOpen[i];
+            if (!t) continue;
+            if (t.kind === 'url') {
+                window.open(t.url, '_blank', 'noopener,noreferrer');
+            } else if (t.kind === 'action' && t.action === 'timer') {
+                startFocusTimer(typeof t.minutes === 'number' ? t.minutes : 25);
+            }
+        }
+    }
+    function startFocusTimer(minutes) {
+        var ms = Math.max(1, minutes | 0) * 60 * 1000;
+        var overlay = document.getElementById('timer-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'timer-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0,0,0,0.55)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.backdropFilter = 'blur(2px)';
+            var panel = document.createElement('div');
+            panel.style.background = 'var(--card-bg, #111)';
+            panel.style.color = 'var(--fg, #fff)';
+            panel.style.padding = '24px 28px';
+            panel.style.borderRadius = '12px';
+            panel.style.boxShadow = '0 8px 30px rgba(0,0,0,0.4)';
+            panel.style.minWidth = '280px';
+            panel.style.textAlign = 'center';
+            var title = document.createElement('div');
+            title.textContent = 'Focus Timer';
+            title.style.fontSize = '18px';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '6px';
+            var timeEl = document.createElement('div');
+            timeEl.id = 'timer-remaining';
+            timeEl.style.fontSize = '34px';
+            timeEl.style.fontVariantNumeric = 'tabular-nums';
+            timeEl.style.letterSpacing = '1px';
+            timeEl.style.margin = '6px 0 10px';
+            var btns = document.createElement('div');
+            btns.style.display = 'flex';
+            btns.style.gap = '8px';
+            btns.style.justifyContent = 'center';
+            var stopBtn = document.createElement('button');
+            stopBtn.textContent = 'Stop';
+            var add5Btn = document.createElement('button');
+            add5Btn.textContent = '+5 min';
+            btns.appendChild(stopBtn);
+            btns.appendChild(add5Btn);
+            panel.appendChild(title);
+            panel.appendChild(timeEl);
+            panel.appendChild(btns);
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+            var timerId = 0;
+            var endAt = 0;
+            function fmt(msLeft) {
+                var s = Math.max(0, Math.round(msLeft / 1000));
+                var m = Math.floor(s / 60);
+                var r = s % 60;
+                return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+            }
+            function tick() {
+                var now = Date.now();
+                var left = Math.max(0, endAt - now);
+                var el = document.getElementById('timer-remaining');
+                if (el) el.textContent = fmt(left);
+                if (left <= 0) {
+                    clearInterval(timerId);
+                    // flash
+                    panel.style.animation = 'none';
+                    void panel.offsetWidth;
+                    panel.style.animation = 'pulse 0.6s ease 0s 4 alternate';
+                    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (_) { }
+                }
+            }
+            function start(msFromNow) {
+                endAt = Date.now() + msFromNow;
+                clearInterval(timerId);
+                timerId = window.setInterval(tick, 250);
+                tick();
+            }
+            stopBtn.addEventListener('click', function () { clearInterval(timerId); overlay.remove(); });
+            add5Btn.addEventListener('click', function () { endAt += 5 * 60 * 1000; tick(); });
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) { clearInterval(timerId); overlay.remove(); } });
+            document.addEventListener('keydown', function onKey(e) {
+                var el = document.getElementById('timer-overlay');
+                if (!el) { document.removeEventListener('keydown', onKey); return; }
+                if (e.key === 'Escape') { clearInterval(timerId); el.remove(); }
+            });
+            // Add minimal keyframes for pulse
+            var style = document.createElement('style');
+            style.textContent = '@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.03); } }';
+            document.head.appendChild(style);
+            start(ms);
+        } else {
+            // If exists, restart
+            var timeEl2 = document.getElementById('timer-remaining');
+            if (timeEl2) timeEl2.textContent = '';
+        }
+    }
     function bindMiniBrowser(miniCfg) {
         // If explicitly disabled, hide the UI and skip initialization
         if (miniCfg && miniCfg.enable === false) {
@@ -539,8 +876,28 @@
                     searchText: 'go ' + q
                 };
             }
+            // Command DSL suggestion (top)
+            let cmd = null;
+            if (q) {
+                try { cmd = parseCommandDsl(q, cfg); } catch (_) { cmd = null; }
+            }
             // Show regular results first; put dynamic go-search suggestion after them
             currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
+            // Prepend command if present
+            if (cmd && cmd.targets && cmd.targets.length) {
+                const first = cmd.targets[0];
+                const label = (cmd.targets.length > 1) ? ('Run: ' + q + '  (opens ' + cmd.targets.length + ')') : ('Run: ' + q);
+                currentResults.unshift({
+                    id: 'cmd:' + q,
+                    label: label,
+                    icon: first.icon || '⚡',
+                    url: first.url || '',
+                    type: 'cmd',
+                    section: 'command',
+                    searchText: q.toLowerCase(),
+                    __cmd: cmd
+                });
+            }
             if (suggestion)
                 currentResults.push(suggestion);
             selectedIndex = 0;
@@ -559,13 +916,21 @@
                 label.textContent = it.label;
                 const meta = document.createElement('span');
                 meta.className = 'ql-meta';
-                meta.textContent = it.type === 'go' ? 'go/' : (it.section || '');
+                meta.textContent = it.type === 'go' ? 'go/' : (it.type === 'cmd' ? 'command' : (it.section || ''));
                 meta.style.opacity = '0.7';
                 meta.style.fontSize = '12px';
                 li.appendChild(icon);
                 li.appendChild(label);
                 li.appendChild(meta);
-                li.addEventListener('click', function () { openItem(it); });
+                li.addEventListener('click', function () {
+                    if (it && it.type === 'cmd' && it.__cmd) {
+                        runCommandTargets(it.__cmd, false, cfg);
+                        close();
+                    }
+                    else {
+                        openItem(it);
+                    }
+                });
                 list.appendChild(li);
             });
         }
@@ -580,6 +945,9 @@
                 }
                 else if (it && it.type === 'go') {
                     key = 'go:' + it.label;
+                }
+                else if (it && it.type === 'cmd' && typeof it.id === 'string') {
+                    key = it.id.replace(/^cmd:/, 'cmd:');
                 }
                 else {
                     key = 'link:' + it.label;
@@ -604,6 +972,9 @@
                     else if (it && it.type === 'go-search' && typeof it.id === 'string') {
                         // Count the exact search query used from the Quick Launcher suggestion
                         incrementLocalCount(it.id);
+                    }
+                    else if (it && it.type === 'cmd' && typeof it.id === 'string') {
+                        incrementLocalCount(it.id.replace(/^cmd:/, 'cmd:'));
                     }
                     else {
                         incrementLocalCount('link:' + it.label);
@@ -632,10 +1003,19 @@
                 move(-1);
                 return;
             }
-            if (matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) {
+            // Enter handling with Shift modifier for DSL
+            if (e.key === 'Enter') {
                 e.preventDefault();
-                if (currentResults[selectedIndex])
+                var q = input.value.trim();
+                var cmd = q ? parseCommandDsl(q, cfg) : { targets: [] };
+                if (cmd && cmd.targets && cmd.targets.length) {
+                    runCommandTargets(cmd, !!e.shiftKey, cfg);
+                    close();
+                    return;
+                }
+                if (currentResults[selectedIndex]) {
                     openItem(currentResults[selectedIndex]);
+                }
             }
         });
         overlay.addEventListener('click', function (e) { if (e.target === overlay)

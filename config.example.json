@@ -46,6 +46,32 @@
         { "label": "Docs", "url": "https://wiki.example.com", "icon": "📚" }
       ]
     }
-  ]
+  ],
+  "commandDsl": {
+    "templates": {
+      "gh {owner}/{repo} i {num}": "https://github.com/{owner}/{repo}/issues/{num}",
+      "gh {owner}/{repo} pr {num}": "https://github.com/{owner}/{repo}/pull/{num}",
+      "gh code {q}": "https://github.com/search?q={urlencode(q)}&type=code",
+      "gh {owner}/{repo}": "https://github.com/{owner}/{repo}",
+      "mdn {q}": "https://developer.mozilla.org/en-US/search?q={urlencode(q)}",
+      "so {q}": "https://stackoverflow.com/search?q={urlencode(q)}",
+      "yt {q}": "https://www.youtube.com/results?search_query={urlencode(q)}",
+      "aur {q}": "https://aur.archlinux.org/packages?K={urlencode(q)}",
+      "wiki {q}": "https://en.wikipedia.org/w/index.php?search={urlencode(q)}",
+      "r/{sub}": "https://www.reddit.com/r/{sub}/",
+      "npm {pkg}": "https://www.npmjs.com/package/{pkg}",
+      "unpkg {pkg}": "https://unpkg.com/browse/{pkg}/",
+      "bp {pkg}": "https://bundlephobia.com/package/{pkg}",
+      "go {key}": ""
+    },
+    "macros": {
+      "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"]
+    },
+    "defaults": {
+      "defaultRepo": "your-org/your-repo",
+      "defaultTrackerPrefix": "ABC-",
+      "trackerUrl": "https://your-tracker.example.com/browse/{id}"
+    }
+  }
 }
 

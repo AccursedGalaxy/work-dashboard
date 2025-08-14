@@ -42,7 +42,6 @@ Then it initializes:
 - **`go/` form**: Resolves keys using `go.keyToUrl`, falls back to `go.fallbackSearchUrl` if provided, or `go.homepageUrl`.
 - **Mini browser**: Initializes from `miniBrowser.defaultUrl` if `miniBrowser.enable !== false`; Enter in the URL bar opens in embed or new tab.
 - **Quick Launcher**: Indexes all links and `go/` keys; fuzzy-search with scoring, keyboard navigation, and open-in-tab.
-- **Global shortcuts**: See Keyboard Shortcuts below.
 
 Security-conscious defaults:
 - Strict Content Security Policy in `index.html` allows only same-origin scripts/styles and HTTPS images/frames.
@@ -85,6 +84,49 @@ You can change these in `config.json`/`config.yaml` under `keybinds` (or in `con
 
 ---
 
+## Command DSL in the Quick Launcher
+
+- **Aliases**: `gh`, `mdn`, `so`, `yt`, `aur`, `wiki`, `r/`, `npm`, `unpkg`, `bp`, `go` (via `go` resolver).
+- **Parameterized templates**: `gh acc/repo i 123` → `https://github.com/acc/repo/issues/123`
+- **Shorthands**:
+  - `pr 42` → opens PR #42 in your `commandDsl.defaults.defaultRepo`
+  - `ABC-123` → opens issue in `commandDsl.defaults.trackerUrl` by `{id}`
+  - `r/learnprogramming` → opens subreddit
+  - `pkg react@18` → opens npm, unpkg, and bundlephobia
+- **Multi-target pipes**: `mdn fetch | so "js fetch cors" | gh code fetch`
+  - Enter opens the first target; Shift+Enter opens all targets.
+- **Template transforms**: `urlencode()`, `lower()`, `kebab()` usable inside `{ ... }` in templates.
+- **Local actions**: `time 25` → starts a local focus timer overlay (no integrations).
+
+Configuration lives under `commandDsl` in your `config.json`/`config.yaml` (or `config.js`). Example:
+
+```json
+{
+  "commandDsl": {
+    "templates": {
+      "gh {owner}/{repo} i {num}": "https://github.com/{owner}/{repo}/issues/{num}",
+      "gh {owner}/{repo} pr {num}": "https://github.com/{owner}/{repo}/pull/{num}",
+      "mdn {q}": "https://developer.mozilla.org/en-US/search?q={urlencode(q)}",
+      "so {q}": "https://stackoverflow.com/search?q={urlencode(q)}",
+      "r/{sub}": "https://www.reddit.com/r/{sub}/",
+      "go {key}": ""
+    },
+    "macros": { "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"] },
+    "defaults": {
+      "defaultRepo": "your-org/your-repo",
+      "defaultTrackerPrefix": "ABC-",
+      "trackerUrl": "https://your-tracker.example.com/browse/{id}"
+    }
+  }
+}
+```
+
+Notes:
+- `go {key}` with an empty string will use your `go` mapping/fallbacks.
+- The last placeholder in a pattern can capture the rest of the text (e.g., `{q}` in `mdn {q}`).
+
+---
+
 ## Wallpapers
 
 Place images under `wallpapers/light/` and `wallpapers/dark/` (existing folders are included). Then reference them in `config.js` `backgrounds.light` and `backgrounds.dark` arrays. The active set switches automatically with the theme.
@@ -111,21 +153,6 @@ This site can be installed as a PWA and works offline for the app shell and cach
 - Install prompt: small button appears when installable
 
 To disable PWA, remove the `<link rel="manifest">` and service worker registration in `index.html`.
-
----
-
-## Project structure
-
-- `index.html` — HTML structure, CSP, widgets, overlays
-- `styles.css` — UI styling, light/dark themes, mini browser, Quick Launcher
-- `config.example.js` — default config (reference only; do not edit)
-- `config.json` / `config.yaml` — file-based config (optional)
-- `config.js` — your private overrides (ignored by git)
-- `src/app.ts` — TypeScript source for client app
-- `src/sw.ts` — TypeScript source for service worker
-- `app.js` — build output (compiled from TypeScript)
-- `sw.js` — build output (compiled from TypeScript)
-- `wallpapers/` — sample images for light/dark sets
 
 ---
 
