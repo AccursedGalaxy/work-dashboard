@@ -164,7 +164,19 @@
     }
     function parseYaml(text) {
         try {
-            if (hasJsYaml()) return window.jsyaml.load(text);
+    function getJsYaml() {
+        if (window.jsyaml && typeof window.jsyaml.load === 'function') return window.jsyaml;
+        if (window.jsYaml && typeof window.jsYaml.load === 'function') return window.jsYaml;
+        if (window['js-yaml'] && typeof window['js-yaml'].load === 'function') return window['js-yaml'];
+        return null;
+    }
+    function hasJsYaml() {
+        return !!getJsYaml();
+    }
+    function parseYaml(text) {
+        try {
+            var jsYaml = getJsYaml();
+            if (jsYaml) return jsYaml.load(text);
             return parseYamlLite(text);
         } catch (e) {
             console.warn('[config] YAML parse failed; falling back to empty object', e);
