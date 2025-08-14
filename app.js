@@ -4,7 +4,7 @@
   const config = mergeDeep({
     theme: 'auto',
     google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
-    miniBrowser: { enable: true, defaultUrl: 'https://www.google.com/webhp?igu=1' },
+    miniBrowser: { enable: false, defaultUrl: 'https://www.google.com/webhp?igu=1' },
     analytics: { enableLocal: false },
     keybinds: {
       quickLauncherOpen: 'Mod+K',
