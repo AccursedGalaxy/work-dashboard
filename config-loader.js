@@ -219,7 +219,15 @@
      */
     function parseYaml(text) {
         try {
-            if (hasJsYaml()) return window.jsyaml.load(text);
+    function getJsYaml() {
+        if (window.jsyaml && typeof window.jsyaml.load === 'function') return window.jsyaml;
+        if (window.jsyaml && typeof window.jsyaml.load === 'function') return window.jsyaml;
+        return null;
+    }
+    function parseYaml(text) {
+        try {
+            var jsYaml = getJsYaml();
+            if (jsYaml) return jsYaml.load(text);
             return parseYamlLite(text);
         } catch (e) {
             console.warn('[config] YAML parse failed; falling back to empty object', e);
