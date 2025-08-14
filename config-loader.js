@@ -75,7 +75,7 @@
                         // already a list
                     } else if (!cur.key) {
                         // anonymous top-level list not expected; create if root empty
-                        if (stack.length === 1 && Object.keys(cur.node).length === 0) {
+                        if (stack.length === ROOT_STACK_DEPTH && Object.keys(cur.node).length === 0) {
                             // replace root with list
                             var newArr = [];
                             stack[0] = { indent: -1, type: 'seq', node: newArr, key: null };
