@@ -1173,28 +1173,16 @@
         return readConfigFromHashString(window.location.hash || '');
     }
     function readConfigFromHashString(hash) {
-        if (!hash)
-            return null;
+        if (!hash) return null;
         const raw = String(hash || '');
-        let b64 = null;
-        if (raw.indexOf('#config=') === 0) {
-            b64 = raw.slice('#config='.length);
-        }
-        else if (raw.indexOf('#') === 0 && raw.indexOf('config=') !== -1) {
-            const qs = new URLSearchParams(raw.slice(1));
-            const v = qs.get('config');
-            b64 = v || null;
-        }
-        if (!b64)
-            return null;
+        const qs = new URLSearchParams(raw.startsWith('#') ? raw.slice(1) : raw);
+        const v = qs.get('config');
+        if (!v) return null;
         try {
-            const json = fromBase64(decodeURIComponent(b64));
+            const json = fromBase64(decodeURIComponent(v));
             const obj = JSON.parse(json);
             return obj && typeof obj === 'object' ? obj : null;
-        }
-        catch (_) {
-            return null;
-        }
+        } catch (_) { return null; }
     }
     function clearConfigHashFromUrl() {
         try {
