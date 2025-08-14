@@ -758,7 +758,10 @@
                 overlay.remove();
                 state.overlay = null;
             });
-            add5Btn.addEventListener('click', function () { state.endAt += 5 * 60 * 1000; tick(); });
+            add5Btn.addEventListener('click', function () {
+                state.endAt += 5 * 60 * 1000;
+                tick();
+            });
             overlay.addEventListener('click', function (e) { if (e.target === overlay) { clearInterval(state.timerId); overlay.remove(); state.overlay = null; } });
             document.addEventListener('keydown', function onKey(e) {
                 var el = document.getElementById('timer-overlay');
