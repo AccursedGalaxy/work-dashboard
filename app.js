@@ -66,6 +66,8 @@
   initQuickLauncher(config);
   initKeybindsWidget(config.keybinds);
   setInitialFocus();
+  initPWAInstallPrompt();
+  registerServiceWorker();
 
   function mergeDeep() {
     const result = {};
@@ -125,6 +127,11 @@
       return list.filter(Boolean);
     }
 
+    // Preload the next image to ensure smooth transition
+    function preloadNext(src) {
+      try { if (!src) return; const img = new Image(); img.decoding = 'async'; img.loading = 'eager'; img.src = src; } catch (_) {}
+    }
+
     function applyImage(immediate) {
       if (!images.length) {
         container.classList.add('bg-hidden');
@@ -138,22 +145,19 @@
       const showEl = showingA ? b : a;
       const hideEl = showingA ? a : b;
       showEl.style.backgroundImage = url;
+      // Preload upcoming image
+      const nextIdx = (index + 1) % images.length; preloadNext(images[nextIdx]);
       // Force reflow to ensure transition
       void showEl.offsetWidth;
       showEl.classList.add('is-showing');
       hideEl.classList.remove('is-showing');
       if (immediate) {
-        const prevA = a.style.transition;
-        const prevB = b.style.transition;
-        a.style.transition = 'none';
-        b.style.transition = 'none';
+        // Use a class to disable transitions (reduces inline-style usage for CSP tightening)
+        container.classList.add('no-transition');
         requestAnimationFrame(function () {
           showEl.classList.add('is-showing');
           hideEl.classList.remove('is-showing');
-          requestAnimationFrame(function () {
-            a.style.transition = prevA;
-            b.style.transition = prevB;
-          });
+          requestAnimationFrame(function () { container.classList.remove('no-transition'); });
         });
       }
     }
@@ -436,7 +440,10 @@
     const list = document.getElementById('ql-list');
     if (!overlay || !input || !list) return;
 
-    const index = buildQuickLauncherIndex(cfg);
+    // Memoized index cache must be declared before first use to avoid TDZ issues
+    var __qlIndexCache = null;
+
+    const index = getMemoizedQuickLauncherIndex(cfg);
     let currentResults = [];
     let selectedIndex = 0;
 
@@ -531,7 +538,8 @@
       close();
     }
 
-    input.addEventListener('input', function () { renderResults(index, input.value); });
+    const debouncedRender = debounce(function () { renderResults(index, input.value); }, 120);
+    input.addEventListener('input', debouncedRender);
     input.addEventListener('keydown', function (e) {
       if (matchesKey(e, cfg.keybinds.quickLauncherClose)) { e.preventDefault(); close(); return; }
       if (matchesKey(e, cfg.keybinds.quickLauncherNext)) { e.preventDefault(); move(1); return; }
@@ -548,6 +556,12 @@
       const next = document.getElementById('ql-item-' + selectedIndex);
       if (prev) prev.setAttribute('aria-selected', 'false');
       if (next) { next.setAttribute('aria-selected', 'true'); next.scrollIntoView({ block: 'nearest' }); }
+    }
+
+    function getMemoizedQuickLauncherIndex(cfg) {
+      if (__qlIndexCache) return __qlIndexCache;
+      __qlIndexCache = buildQuickLauncherIndex(cfg);
+      return __qlIndexCache;
     }
 
     function buildQuickLauncherIndex(cfg) {
@@ -600,10 +614,22 @@
     return score;
   }
 
+  // Debounce helper
+  function debounce(fn, wait) {
+    var t = null;
+    return function () {
+      var ctx = this, args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(ctx, args); }, Math.max(0, wait | 0));
+    };
+  }
+
   function bindGlobalShortcuts(keys) {
     document.addEventListener('keydown', function (e) {
       // Open/close quick launcher — allow even when typing inside inputs
       if (matchesKey(e, keys.quickLauncherOpen)) {
+        // Prevent key auto-repeat from immediately toggling open/close when using single-letter bindings
+        if (e.repeat) { e.preventDefault(); return; }
         e.preventDefault();
         var overlay = document.getElementById('quick-launcher');
         if (overlay && overlay.classList.contains('is-open')) {
@@ -732,6 +758,35 @@
       if (document.body) {
         if (!document.body.hasAttribute('tabindex')) document.body.setAttribute('tabindex', '-1');
         document.body.focus({ preventScroll: true });
+      }
+    } catch (_) {}
+  }
+
+  // Minimal PWA install prompt button logic
+  function initPWAInstallPrompt() {
+    try {
+      var btn = document.getElementById('pwa-install');
+      if (!btn) return;
+      var deferred;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        btn.removeAttribute('hidden');
+      });
+      btn.addEventListener('click', function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.finally(function () { btn.setAttribute('hidden', ''); deferred = null; });
+      });
+    } catch (_) {}
+  }
+
+  function registerServiceWorker() {
+    try {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {});
+        });
       }
     } catch (_) {}
   }

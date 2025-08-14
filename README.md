@@ -1,6 +1,8 @@
 #
 ## Work Dashboard
 
+![Preview](./preview.png)
+
 Minimal, fast, and elegant personal start page for work. It gives you:
 
 - Quick access to your daily links
@@ -59,8 +61,8 @@ Security-conscious defaults:
      ```
 3. Open it:
    - Easiest: open `index.html` directly in your browser
-   - Recommended: serve locally for a proper origin (helps with CSP and caching)
-     - `python3 -m http.server 8000` → visit `http://localhost:8000`
+    - Recommended: serve locally for a proper origin (helps with CSP, caching, and PWA)
+      - `python3 -m http.server 8000` → visit `http://localhost:8000`
 
 > Note: `config.js` is git-ignored so your work-specific links remain private.
 
@@ -100,6 +102,18 @@ Ensure your host serves the files with the correct MIME types and preserves the 
 
 ---
 
+## Progressive Web App (optional)
+
+This site can be installed as a PWA and works offline for the app shell and cached wallpapers.
+
+- Manifest: `manifest.webmanifest`
+- Service worker: `sw.js` (caches app shell + same‑origin assets)
+- Install prompt: small button appears when installable
+
+To disable PWA, remove the `<link rel="manifest">` and service worker registration in `index.html`.
+
+---
+
 ## Project structure
 
 - `index.html` — HTML structure, CSP, widgets, overlays
@@ -116,6 +130,11 @@ Ensure your host serves the files with the correct MIME types and preserves the 
 No external analytics. If `analytics.enableLocal` is true in your `config.js`, simple usage counters are stored in `localStorage` only and used to improve Quick Launcher ranking on your device.
 
 ---
+
+## CSP notes
+
+The default CSP currently includes `style-src 'unsafe-inline'` due to dynamic UI transitions and minimal inline script for the service worker registration. We are actively replacing ad‑hoc inline styles with CSS classes/variables (e.g., background crossfade uses a `no-transition` class), which will allow removal of `'unsafe-inline'` in a future release. If you self‑host with a stricter CSP today, consider adding a nonce/hash and moving the small inline registration into `app.js`.
+
 
 ## FAQ
 

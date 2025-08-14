@@ -64,6 +64,8 @@ body {
               linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
 }
 #bg.bg-hidden { display: none; }
+/* When immediate crossfade is requested, temporarily disable transitions via a class instead of inline styles */
+#bg.no-transition .bg-layer { transition: none !important; }
 
 .site-header {
   display: flex;
@@ -146,6 +148,8 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
+  content-visibility: auto;
+  contain: content;
 }
 
 .card {
@@ -192,6 +196,9 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-top: 12px;
+  /* Heavy grid: allow the browser to skip offscreen rendering */
+  content-visibility: auto;
+  contain: content;
 }
 
 .section-card { padding: 0; }
@@ -314,7 +321,7 @@ body {
   font-size: 16px;
 }
 .ql-divider { height: 1px; background: var(--card-border); }
-.ql-list { max-height: 50vh; overflow: auto; padding: 8px 0; }
+.ql-list { max-height: 50vh; overflow: auto; padding: 8px 0; content-visibility: auto; contain: content; }
 .ql-item {
   display: flex;
   align-items: center;
@@ -331,6 +338,22 @@ body {
 /* Motion reduction */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+/* PWA install button (appears when installable) */
+#pwa-install {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  cursor: pointer;
 }
 
 
