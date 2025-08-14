@@ -23,10 +23,14 @@ window.DASHBOARD_DEFAULT_CONFIG = {
     transitionMs: 1200, // crossfade duration
     randomize: true,
     light: [
-      // 'wallpapers/light/light1.jpg', 'wallpapers/light/light2.jpg'
+      // 'wallpapers/light/light1.jpg',
+      // 'wallpapers/light/light2.jpg',
     ],
     dark: [
-      // 'wallpapers/dark/dark1.jpg', 'wallpapers/dark/dark2.jpg'
+      // 'wallpapers/dark/dark1.jpg',
+      // 'wallpapers/dark/dark2.jpg',
+      // 'wallpapers/dark/dark3.jpg',
+      // 'wallpapers/dark/dark4.jpg',
     ]
   },
   miniBrowser: {
