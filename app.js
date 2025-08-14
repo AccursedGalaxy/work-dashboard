@@ -671,7 +671,10 @@
     }
     function startFocusTimer(minutes) {
         var ms = Math.max(1, minutes | 0) * 60 * 1000;
-        var overlay = document.getElementById('timer-overlay');
+        // Singleton state stored on the function object
+        var state = startFocusTimer.__state || { overlay: null, timerId: 0, endAt: 0 };
+        startFocusTimer.__state = state;
+        var overlay = state.overlay || document.getElementById('timer-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'timer-overlay';
@@ -717,8 +720,9 @@
             panel.appendChild(btns);
             overlay.appendChild(panel);
             document.body.appendChild(overlay);
-            var timerId = 0;
-            var endAt = 0;
+            state.overlay = overlay;
+            state.timerId = 0;
+            state.endAt = 0;
             function fmt(msLeft) {
                 var s = Math.max(0, Math.round(msLeft / 1000));
                 var m = Math.floor(s / 60);
@@ -727,11 +731,11 @@
             }
             function tick() {
                 var now = Date.now();
-                var left = Math.max(0, endAt - now);
+                var left = Math.max(0, state.endAt - now);
                 var el = document.getElementById('timer-remaining');
                 if (el) el.textContent = fmt(left);
                 if (left <= 0) {
-                    clearInterval(timerId);
+                    clearInterval(state.timerId);
                     // flash
                     panel.style.animation = 'none';
                     void panel.offsetWidth;
@@ -740,29 +744,41 @@
                 }
             }
             function start(msFromNow) {
-                endAt = Date.now() + msFromNow;
-                clearInterval(timerId);
-                timerId = window.setInterval(tick, 250);
+                state.endAt = Date.now() + msFromNow;
+                clearInterval(state.timerId);
+                state.timerId = window.setInterval(tick, 250);
                 tick();
             }
-            stopBtn.addEventListener('click', function () { clearInterval(timerId); overlay.remove(); });
-            add5Btn.addEventListener('click', function () { endAt += 5 * 60 * 1000; tick(); });
-            overlay.addEventListener('click', function (e) { if (e.target === overlay) { clearInterval(timerId); overlay.remove(); } });
+            stopBtn.addEventListener('click', function () { clearInterval(state.timerId); overlay.remove(); state.overlay = null; });
+            add5Btn.addEventListener('click', function () { state.endAt += 5 * 60 * 1000; tick(); });
+            overlay.addEventListener('click', function (e) { if (e.target === overlay) { clearInterval(state.timerId); overlay.remove(); state.overlay = null; } });
             document.addEventListener('keydown', function onKey(e) {
                 var el = document.getElementById('timer-overlay');
                 if (!el) { document.removeEventListener('keydown', onKey); return; }
-                if (e.key === 'Escape') { clearInterval(timerId); el.remove(); }
+                if (e.key === 'Escape') { clearInterval(state.timerId); el.remove(); state.overlay = null; }
             });
             // Add minimal keyframes for pulse
             var style = document.createElement('style');
             style.textContent = '@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.03); } }';
             document.head.appendChild(style);
-            start(ms);
-        } else {
-            // If exists, restart
-            var timeEl2 = document.getElementById('timer-remaining');
-            if (timeEl2) timeEl2.textContent = '';
         }
+        // Start or restart countdown
+        clearInterval(state.timerId);
+        state.endAt = Date.now() + ms;
+        state.timerId = window.setInterval(function () {
+            var now = Date.now();
+            var left = Math.max(0, state.endAt - now);
+            var el = document.getElementById('timer-remaining');
+            if (el) {
+                var s = Math.max(0, Math.round(left / 1000));
+                var m = Math.floor(s / 60);
+                var r = s % 60;
+                el.textContent = String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+            }
+            if (left <= 0) {
+                clearInterval(state.timerId);
+            }
+        }, 250);
     }
     function bindMiniBrowser(miniCfg) {
         // If explicitly disabled, hide the UI and skip initialization
