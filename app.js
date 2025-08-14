@@ -911,6 +911,58 @@
             overlay.classList.remove('is-open');
             overlay.setAttribute('aria-hidden', 'true');
         }
+
+        // Suggest frequently used DSL commands based on local analytics counts (e.g., typing "unix" suggests "r/unixporn")
+        function getLearnedCommandSuggestions(q, cfg) {
+            const query = String(q || '').trim();
+            if (!query)
+                return [];
+            try {
+                const counts = readCounts();
+                const qq = query.toLowerCase();
+                const items = [];
+                Object.keys(counts).forEach(function (key) {
+                    if (key.indexOf('cmd:') !== 0)
+                        return;
+                    const label = key.slice(4);
+                    if (!label)
+                        return;
+                    // Avoid duplicating the exact typed command suggestion
+                    if (label.toLowerCase() === qq)
+                        return;
+                    const parsed = parseCommandDsl(label, cfg);
+                    if (!parsed || !parsed.targets || !parsed.targets.length)
+                        return;
+                    const count = counts[key] | 0;
+                    const base = label.toLowerCase();
+                    const score = fuzzyScore(qq, base) + (base.startsWith(qq) ? 2 : 0) + Math.min(5, count / 5);
+                    if (score <= 0)
+                        return;
+                    const first = parsed.targets[0];
+                    items.push({
+                        id: 'cmd:' + label,
+                        label: 'Run again: ' + label,
+                        icon: (first && first.icon) || '⚡',
+                        url: (first && first.url) || '',
+                        type: 'cmd',
+                        section: 'command',
+                        searchText: base,
+                        __cmd: parsed,
+                        __score: score
+                    });
+                });
+                items.sort(function (a, b) { return (b.__score || 0) - (a.__score || 0); });
+                // Strip internal score before returning and cap to top 3
+                return items.slice(0, 3).map(function (it) {
+                    delete it.__score;
+                    return it;
+                });
+            }
+            catch (_) {
+                return [];
+            }
+        }
+
         function renderResults(items, query) {
             const q = query.trim();
             const scored = q ? items.map(function (it) {
@@ -932,11 +984,12 @@
             // Command DSL suggestion (top)
             let cmd = null;
             if (q) {
-                try { cmd = parseCommandDsl(q, cfg); } catch (_) { cmd = null; }
+                try { cmd = parseCommandDsl(q, cfg); }
+                catch (_) { cmd = null; }
             }
-            // Show regular results first; put dynamic go-search suggestion after them
+            // Show regular results first; then learned DSL suggestions; put dynamic go-search suggestion after them
             currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
-            // Prepend command if present
+            // Prepend command if present (highest priority)
             if (cmd && cmd.targets && cmd.targets.length) {
                 const first = cmd.targets[0];
                 const label = (cmd.targets.length > 1) ? ('Run: ' + q + '  (opens ' + cmd.targets.length + ')') : ('Run: ' + q);
@@ -950,6 +1003,11 @@
                     searchText: q.toLowerCase(),
                     __cmd: cmd
                 });
+            }
+            // Learned suggestions based on prior commands
+            const learned = getLearnedCommandSuggestions(q, cfg);
+            if (learned && learned.length) {
+                currentResults = learned.concat(currentResults);
             }
             if (suggestion)
                 currentResults.push(suggestion);
@@ -1076,6 +1134,13 @@
                 var parsed = q ? parseCommandDsl(q, cfg) : { targets: [] };
                 if (parsed && parsed.targets && parsed.targets.length) {
                     runCommandTargets(parsed, !!e.shiftKey, cfg);
+                    close();
+                    return;
+                }
+                // Finally, try learned command suggestions based on history
+                var learned = getLearnedCommandSuggestions(q, cfg);
+                if (learned && learned.length && learned[0] && learned[0].__cmd) {
+                    runCommandTargets(learned[0].__cmd, !!e.shiftKey, cfg);
                     close();
                 }
             }

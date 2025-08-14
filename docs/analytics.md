@@ -19,6 +19,7 @@ When enabled, the app records simple usage counts in `localStorage` on the clien
   - `go:KEY` — opening a `go/KEY`
   - `go-search:QUERY` — selecting a dynamic `go/` search suggestion
   - `search:google` — submitting the Google form
+  - `cmd:TEXT` — executing a command via the Command DSL (e.g., `cmd:r/unixporn`)
 
 Example value:
 
@@ -27,7 +28,8 @@ Example value:
   "link:Tickets": 12,
   "go:PAM": 8,
   "go-search:datacenter": 3,
-  "search:google": 19
+  "search:google": 19,
+  "cmd:r/unixporn": 7
 }
 ```
 
@@ -35,6 +37,7 @@ Example value:
 
 - The Quick Launcher adds a small score boost based on these counts (capped)
 - Popular items surface higher in results over time
+- Frequently used command texts are suggested when typing partial matches, allowing quick re-run of past commands (e.g., type "unix" to see `Run again: r/unixporn`)
 
 ## Resetting counts
 
