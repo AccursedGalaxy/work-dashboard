@@ -17,6 +17,10 @@ window.DASHBOARD_DEFAULT_CONFIG = {
       // 'wallpapers/dark/1.jpg', 'wallpapers/dark/2.jpg'
     ]
   },
+  miniBrowser: {
+    // Initial URL for the mini browser input and iframe
+    defaultUrl: 'https://www.google.com/webhp?igu=1'
+  },
   google: {
     baseUrl: 'https://www.google.com/search',
     queryParam: 'q'

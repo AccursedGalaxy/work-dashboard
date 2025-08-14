@@ -4,6 +4,7 @@
   const config = mergeDeep({
     theme: 'auto',
     google: { baseUrl: 'https://www.google.com/search', queryParam: 'q' },
+    miniBrowser: { defaultUrl: 'https://www.google.com/webhp?igu=1' },
     go: {
       homepageUrl: 'https://go/',
       fallbackSearchUrl: '',
@@ -49,7 +50,7 @@
   renderSections(config.sections);
   bindGoogleForm(config.google);
   bindGoForm(config.go);
-  bindMiniBrowser();
+  bindMiniBrowser(config.miniBrowser);
 
   function mergeDeep() {
     const result = {};
@@ -296,13 +297,19 @@
     window.location.href = url;
   }
 
-  function bindMiniBrowser() {
+  function bindMiniBrowser(miniCfg) {
     const input = document.getElementById('mb-url');
     const targetSel = document.getElementById('mb-target');
     const frame = document.getElementById('mb-frame');
     const box = document.getElementById('mini-browser');
     const handleTL = document.getElementById('mb-resize-tl');
     if (!input || !frame) return;
+
+    // Initialize from config if provided
+    if (miniCfg && typeof miniCfg.defaultUrl === 'string' && miniCfg.defaultUrl) {
+      input.value = miniCfg.defaultUrl;
+      frame.src = miniCfg.defaultUrl;
+    }
 
     // When user presses Enter in the URL bar, open in chosen target
     input.addEventListener('keydown', function (e) {
