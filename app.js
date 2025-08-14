@@ -773,7 +773,11 @@
             document.addEventListener('keydown', function onKey(e) {
                 var el = document.getElementById('timer-overlay');
                 if (!el) { document.removeEventListener('keydown', onKey); return; }
-                if (e.key === 'Escape') { clearInterval(state.timerId); el.remove(); state.overlay = null; }
+                if (e.key === 'Escape') {
+                    clearInterval(state.timerId);
+                    el.remove();
+                    state.overlay = null;
+                }
             });
             // Add minimal keyframes for pulse
             var style = document.createElement('style');
