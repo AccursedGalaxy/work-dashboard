@@ -83,7 +83,8 @@
                         } else {
                             // fallback: create temp list under "items"
                             cur.node.items = cur.node.items || [];
-                            stack.push({ indent: indent - 2, type: 'seq', node: cur.node.items, key: null });
+                            cur.node[ANONYMOUS_LIST_KEY] = cur.node[ANONYMOUS_LIST_KEY] || [];
+                            stack.push({ indent: indent - 2, type: 'seq', node: cur.node[ANONYMOUS_LIST_KEY], key: null });
                             cur = getTop();
                         }
                     } else {
