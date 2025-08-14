@@ -493,7 +493,7 @@
         }
         // Plain variable
         var key = s.trim();
-        return vars.hasOwnProperty(key) ? String(vars[key]) : '';
+        return Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : '';
     }
     function interpolateUrl(tpl, vars) {
         return String(tpl).replace(/\{([^}]+)\}/g, function (_, expr) { return evalTemplateExpr(expr, vars); });
