@@ -262,26 +262,24 @@
     const partials = new Set<string>();
     const text = command.toLowerCase();
     
-    // Extract meaningful substrings
-    for (let i = 0; i <= text.length - 3; i++) {
-      for (let j = i + 3; j <= text.length; j++) {
-        const substring = text.slice(i, j);
-        
-        // Skip if starts/ends with special chars or spaces
-        if (/^[^a-z0-9]|[^a-z0-9]$/.test(substring)) continue;
-        
-        // Include patterns that are likely search terms
-        if (substring.length >= 3 && substring.length <= 15) {
-          partials.add(substring);
-        }
+    // Extract prefixes of the full command (most useful for autocomplete)
+    for (let i = 3; i <= Math.min(text.length, 12); i++) {
+      const prefix = text.slice(0, i);
+      if (/^[a-z0-9]/.test(prefix)) {
+        partials.add(prefix);
       }
     }
     
-    // Also extract word-based patterns
-    const words = text.match(/[a-z0-9]+/g) || [];
+    // Extract individual words that are meaningful
+    const words = text.match(/[a-z0-9]{3,}/g) || [];
     for (const word of words) {
-      if (word.length >= 3) {
-        partials.add(word);
+      partials.add(word);
+      
+      // Also add prefixes of longer words
+      if (word.length > 4) {
+        for (let i = 3; i <= Math.min(word.length - 1, 8); i++) {
+          partials.add(word.slice(0, i));
+        }
       }
     }
     
@@ -376,16 +374,16 @@
     const suggestions = [];
     const now = Date.now();
     
-    // Find patterns that match the query
+    // Find patterns that match the query - use strict prefix matching to avoid false positives
     for (const partial of Object.keys(patterns)) {
-      if (partial.includes(query) || query.includes(partial)) {
+      if (partial.startsWith(query)) {
         const entries = patterns[partial];
         
         for (const entry of entries) {
           // Calculate pattern-based score
           const recencyBonus = Math.max(0, 5 - (now - entry.lastUsed) / (7 * 24 * 60 * 60 * 1000)); // Decay over 7 days
           const frequencyBonus = Math.min(10, entry.count);
-          const matchQuality = partial === query ? 10 : (partial.startsWith(query) ? 5 : 2);
+          const matchQuality = partial === query ? 10 : 5; // Exact match or prefix match
           const score = matchQuality + frequencyBonus + recencyBonus;
           
           // Parse the command to make sure it's still valid
