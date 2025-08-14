@@ -628,7 +628,22 @@
     function parseCommandDsl(raw, cfg) {
         var text = String(raw || '').trim();
         if (!text) return { targets: [], label: '' };
-        var parts = text.split('|').map(function (p) { return p.trim(); }).filter(Boolean);
+        // Split on '|' while honoring quotes and backslash escapes
+        function splitPipes(s) {
+            var out = [], cur = '', inS = false, inD = false, esc = false;
+            for (var i = 0; i < s.length; i++) {
+                var ch = s[i];
+                if (esc) { cur += ch; esc = false; continue; }
+                if (ch === '\\') { esc = true; continue; }
+                if (ch === '"' && !inS) { inD = !inD; continue; }
+                if (ch === "'" && !inD) { inS = !inS; continue; }
+                if (ch === '|' && !inS && !inD) { out.push(cur.trim()); cur = ''; continue; }
+                cur += ch;
+            }
+            if (cur) out.push(cur.trim());
+            return out.filter(Boolean);
+        }
+        var parts = splitPipes(text);
         var all = [];
         for (var i = 0; i < parts.length; i++) {
             var segTargets = parseCommandSegment(parts[i], cfg);
