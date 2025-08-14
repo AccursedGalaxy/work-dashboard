@@ -987,9 +987,12 @@
       try {
         const found = readConfigFromUrlHash();
         if (found && isPlainObject(found)) {
+          const check = validateConfigObject(found);
+          if (!check.valid) { setStatus('URL config invalid: ' + check.errors.join('; '), true); clearConfigHashFromUrl(); return; }
           const ok = confirm('Apply configuration from current URL?\n\n' + summarizeConfig(found));
           if (ok) {
             applyRuntimeOverride(found, true);
+            clearConfigHashFromUrl();
             window.location.reload();
             return;
           }
@@ -999,6 +1002,8 @@
             const u = new URL(input);
             const parsed = readConfigFromHashString(u.hash || '');
             if (parsed && isPlainObject(parsed)) {
+              const check2 = validateConfigObject(parsed);
+              if (!check2.valid) { setStatus('URL config invalid: ' + check2.errors.join('; '), true); return; }
               const ok2 = confirm('Apply configuration from pasted URL?\n\n' + summarizeConfig(parsed));
               if (ok2) {
                 applyRuntimeOverride(parsed, true);
