@@ -36,11 +36,7 @@ window.DASHBOARD_DEFAULT_CONFIG = {
     queryParam: 'q'
   },
   go: {
-    // Where to go for a bare `go/`
-    homepageUrl: 'https://go/',
-    // If provided, unknown keys will open this URL + encoded key
-    // e.g. 'https://go/search?q='
-    fallbackSearchUrl: '',
+    fallbackSearchUrl: 'http://go/',
   },
   sections: [
     {
