@@ -104,7 +104,7 @@ export interface DashboardConfig {
 }
 ```
 
-Note: `config.example.js` provides a documented baseline you can copy into `config.js`. It does not need to re-state every default; unspecified fields fall back to the built-in values above.
+Note: [`config.example.js`](../config.example.js) provides a documented baseline you can copy into `config.js`. The repository does not include `config.js`; create it by copying the example. Unspecified fields fall back to the built-in values above.
 
 ## Keybinds syntax
 
