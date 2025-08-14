@@ -26,7 +26,7 @@ export interface DashboardConfig {
   google?: {
     baseUrl?: string;          // default https://www.google.com/search
     queryParam?: string;       // default 'q'
-    extraParams?: Record<string, string | number | boolean>; // optional extra query params
+    extraParams?: Record<string, string | number | boolean>; // optional extra query params — values are stringified via String(value) and added with URLSearchParams.set; booleans become "true"/"false", numbers are stringified, null/undefined are ignored, arrays are not supported (pre-join or customize to append), and repeated keys are replaced (not appended)
   };
   miniBrowser?: {
     enable?: boolean;          // default false (UI hidden when false)
