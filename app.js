@@ -949,12 +949,23 @@
         }
         function renderResults(items, query) {
             const q = query.trim();
+            // Score regular items
             const scored = q ? items.map(function (it) {
-                return { item: it, score: fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it) };
-            }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
-            scored.sort(function (a, b) { return b.score - a.score; });
-            // Get smart command suggestions based on learned patterns
+                const baseScore = fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it);
+                // Boost score significantly for exact or strong prefix matches to prioritize what user actually types
+                const exactMatchBoost = it.searchText.toLowerCase() === q.toLowerCase() ? 20 : 0;
+                const strongPrefixBoost = it.searchText.toLowerCase().startsWith(q.toLowerCase()) ? 10 : 0;
+                return { item: it, score: baseScore + exactMatchBoost + strongPrefixBoost, type: 'regular' };
+            }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it), type: 'regular' }; });
+            // Get smart command suggestions and score them
             const learned = q ? getLearnedCommandSuggestions(q, cfg) : [];
+            const scoredLearned = learned.map(function (it) {
+                // Smart suggestions get their internal score, but we cap it to ensure user input takes priority
+                const smartScore = it.__score || 0;
+                // Cap smart suggestion scores so they don't override strong user input matches
+                const cappedScore = Math.min(smartScore, 15);
+                return { item: it, score: cappedScore, type: 'smart' };
+            });
             // Dynamic go/ search suggestion
             let suggestion = null;
             if (q && cfg.go && cfg.go.fallbackSearchUrl) {
@@ -967,12 +978,11 @@
                     searchText: 'go ' + q
                 };
             }
-            // Combine results: smart suggestions first, then regular results, then go search
-            currentResults = [];
-            if (learned && learned.length) {
-                currentResults = learned.concat(currentResults);
-            }
-            currentResults = currentResults.concat(scored.slice(0, 50).map(function (r) { return r.item; }));
+            // Combine and sort all results by score (smart suggestions now compete fairly with regular items)
+            const allScored = scored.concat(scoredLearned);
+            allScored.sort(function (a, b) { return b.score - a.score; });
+            // Build final results list with top scored items
+            currentResults = allScored.slice(0, 50).map(function (r) { return r.item; });
             if (suggestion)
                 currentResults.push(suggestion);
             selectedIndex = 0;
