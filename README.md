@@ -72,7 +72,7 @@ Security-conscious defaults:
 
 ## Keyboard shortcuts
 
-- **Open/close Quick Launcher**: Mod+K (Ctrl/Cmd+K)
+- **Open/close Quick Launcher**: k
 - **Close Quick Launcher**: Escape
 - **Next result**: ArrowDown
 - **Previous result**: ArrowUp
