@@ -7,9 +7,11 @@ Configuration is resolved from three sources and merged in order (later override
 3. `window.DASHBOARD_CONFIG` (from your `config.js`)
 
 Later sources override earlier ones. Merge strategy:
+
 - Objects are merged recursively
 - Arrays are replaced (not concatenated)
-- Primitives are overwritten by the last source
+- Primitive values are overwritten by the last source
+- null in a later source replaces earlier object/array values; omit the field (or use undefined) to inherit from earlier sources
 
 Only specify the fields you need to change in `config.js`.
 
