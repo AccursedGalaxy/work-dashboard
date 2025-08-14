@@ -4,6 +4,19 @@
 
 window.DASHBOARD_DEFAULT_CONFIG = {
   theme: 'auto', // 'dark' | 'light' | 'auto'
+  backgrounds: {
+    // Place your images under a local `wallpapers/` folder or use full URLs
+    enable: true,
+    cycleMs: 15000, // time between changes
+    transitionMs: 1200, // crossfade duration
+    randomize: true,
+    light: [
+      // 'wallpapers/light/1.jpg', 'wallpapers/light/2.jpg'
+    ],
+    dark: [
+      // 'wallpapers/dark/1.jpg', 'wallpapers/dark/2.jpg'
+    ]
+  },
   google: {
     baseUrl: 'https://www.google.com/search',
     queryParam: 'q'

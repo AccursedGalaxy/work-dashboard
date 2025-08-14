@@ -49,6 +49,20 @@
   <footer class="site-footer">
     <p>Edit your links in <code>config.js</code> (copy from <code>config.example.js</code>).</p>
   </footer>
+
+  <div id="mini-browser" style="position: fixed; bottom: 16px; right: 16px; width: 560px; height: 420px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35); overflow: hidden; resize: both;">
+    <div id="mb-resize-tl" aria-hidden="true" style="position:absolute; top:0; left:0; width:14px; height:14px; cursor:nwse-resize; z-index:2;"></div>
+    <div style="display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; background:#1b1b1b;">
+      <strong style="font: 600 12px system-ui;">Mini Browser</strong>
+      <select id="mb-target" title="Where to open" style="font:12px system-ui; background:#0f0f0f; color:#ddd; border:1px solid #333; border-radius:6px; padding:.3rem .4rem;">
+        <option value="embed">Embed</option>
+        <option value="tab" selected>New Tab</option>
+      </select>
+      <input id="mb-url" type="text" value="https://www.google.com/webhp?igu=1" style="flex:1; font: 12px system-ui; background:#0f0f0f; color:#ddd; border:1px solid #333; border-radius:6px; padding:.35rem .5rem;" />
+    </div>
+
+    <iframe id="mb-frame" src="https://www.google.com/webhp?igu=1" title="Mini Browser" style="border:0; width:100%; height:calc(100% - 40px); background:#fff;" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; geolocation; picture-in-picture; web-share" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-same-origin"></iframe>
+  </div>
 </body>
 </html>
 

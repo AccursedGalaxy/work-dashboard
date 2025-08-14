@@ -7,6 +7,7 @@ Simple static dashboard to quickly access daily links and pages, search Google, 
 - Google search box
 - `go/` intranet shortcut box (supports `go/`, `go/PAM`, `PAM`)
 - Dark/Light theme toggle with local storage
+- Optional cycling wallpapers, with separate light/dark sets
 
 ## Setup
 1. Open this folder in a browser directly or via a local server.
@@ -23,7 +24,39 @@ Simple static dashboard to quickly access daily links and pages, search Google, 
   - `go.homepageUrl`: where `go/` should take you
   - `go.keyToUrl`: map keys like `PAM` to full URLs
   - `go.fallbackSearchUrl`: optional prefix for unknown keys (e.g. `https://go/search?q=`)
-  - `theme`: `'dark' | 'light' | 'auto'`
+   - `theme`: `'dark' | 'light' | 'auto'`
+   - `backgrounds`:
+     - `enable`: boolean to turn wallpaper cycler on/off
+     - `cycleMs`: milliseconds between wallpaper changes
+     - `transitionMs`: crossfade duration
+     - `randomize`: shuffle order before cycling
+     - `light`: array of image URLs for light theme
+     - `dark`: array of image URLs for dark theme
+
+### Wallpapers
+
+Create folders like `wallpapers/light/` and `wallpapers/dark/` next to `index.html` and drop your images there. Then list them in your `config.js`:
+
+```js
+window.DASHBOARD_CONFIG = {
+  backgrounds: {
+    enable: true,
+    cycleMs: 20000,
+    transitionMs: 1200,
+    randomize: true,
+    light: [
+      'wallpapers/light/01.jpg',
+      'wallpapers/light/02.jpg'
+    ],
+    dark: [
+      'wallpapers/dark/01.jpg',
+      'wallpapers/dark/02.jpg'
+    ]
+  }
+};
+```
+
+The active set switches automatically when you toggle between light/dark.
 
 ## Files
 - `index.html` – structure and widgets
