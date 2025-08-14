@@ -1,6 +1,11 @@
 (function () {
   let config: any;
   let backgroundCycler: { setTheme: (t: string) => void } | null = null;
+  /**
+   * Build the runtime configuration by merging defaults, file-level, and user overrides, then initialize the dashboard.
+   *
+   * This performs the app startup: it composes the final `config` (deep-merged from built-in defaults, a file-provided config, and any user config on window), applies the initial theme, creates and wires the background cycler, renders link sections, binds forms and UI features (Google/Go forms, mini-browser, global shortcuts, quick launcher, keybind help), sets initial focus, and registers PWA/install and service worker hooks. Side effects include writing to global `config` and `backgroundCycler` and attaching many DOM event listeners.
+   */
   function start() {
     const defaultConfig = (window as any).DASHBOARD_DEFAULT_CONFIG || {};
     const fileConfig = (window as any).__FILE_CONFIG__ || {};
@@ -80,6 +85,14 @@
     start();
   }
 
+  /**
+   * Deeply merges multiple plain objects into a new object.
+   *
+   * Merges enumerable own properties from left-to-right: nested plain objects are merged recursively, arrays are shallow-copied, and primitive values from later arguments override earlier ones. Non-object or falsy arguments are ignored. The function operates on own keys only (no prototype merging) and returns a newly created object.
+   *
+   * @param objs - Objects to merge (later objects take precedence)
+   * @returns A new object containing the merged result
+   */
   function mergeDeep(...objs: any[]) {
     const result: any = {};
     for (const obj of objs) {
