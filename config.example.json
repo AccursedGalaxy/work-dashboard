@@ -68,7 +68,7 @@
       "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"]
     },
     "defaults": {
-      "defaultRepo": "AccursedGalaxy/work-dashboard",
+      "defaultRepo": "your-org/your-repo",
       "defaultTrackerPrefix": "ABC-",
       "trackerUrl": "https://your-tracker.example.com/browse/{id}"
     }
