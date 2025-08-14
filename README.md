@@ -53,16 +53,16 @@ Security-conscious defaults:
 
 1. Clone/download this project.
 2. Copy config and customize:
-   - Copy `config.example.js` → `config.js`
-   - Edit `config.js` and set your links, and wallpapers
-   - To disable the mini browser entirely, set:
-     ```js
-     window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };
-     ```
+  - Copy `config.example.js` → `config.js`
+  - Edit `config.js` and set your links, and wallpapers
+  - To disable the mini browser entirely, set:
+    ```js
+    window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };
+    ```
 3. Open it:
-   - Easiest: open `index.html` directly in your browser
-    - Recommended: serve locally for a proper origin (helps with CSP, caching, and PWA)
-      - `python3 -m http.server 8000` → visit `http://localhost:8000`
+  - Easiest: open `index.html` directly in your browser
+  - Recommended: serve locally for a proper origin (helps with CSP, caching, and PWA)
+    - `python3 -m http.server 8000` → visit `http://localhost:8000`
 
 > Note: `config.js` is git-ignored so your work-specific links remain private.
 
@@ -120,7 +120,10 @@ To disable PWA, remove the `<link rel="manifest">` and service worker registrati
 - `styles.css` — UI styling, light/dark themes, mini browser, Quick Launcher
 - `config.example.js` — default config (reference only; do not edit)
 - `config.js` — your private overrides (ignored by git)
-- `app.js` — client-side logic (rendering, events, shortcuts, wallpapers)
+- `src/app.ts` — TypeScript source for client app
+- `src/sw.ts` — TypeScript source for service worker
+- `app.js` — build output (compiled from TypeScript)
+- `sw.js` — build output (compiled from TypeScript)
 - `wallpapers/` — sample images for light/dark sets
 
 ---
