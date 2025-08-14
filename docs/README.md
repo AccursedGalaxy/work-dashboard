@@ -3,7 +3,7 @@
 The Work Dashboard is a minimal, fast, personal start page. This documentation covers all public integration points: configuration options, UI components, global APIs, keyboard shortcuts, and the service worker.
 
 - See the project overview in `README.md` at the repository root
-- Default configuration reference lives in `config.example.js`
+- Default configuration reference lives in `config.example.js`; you can use `config.json`/`config.yaml` or `config.js` to override
 
 ## Contents
 
@@ -17,29 +17,30 @@ The Work Dashboard is a minimal, fast, personal start page. This documentation c
 
 ## Quick start
 
-Create a `config.js` next to `index.html` with only the overrides you need:
+Create a `config.json` (or `config.yaml`) next to `index.html` with only the overrides you need:
 
-```js
-// config.js (git-ignored)
-window.DASHBOARD_CONFIG = {
-  theme: 'auto',
-  keybinds: { quickLauncherOpen: 'Mod+K' },
-  miniBrowser: { enable: false },
-  backgrounds: {
-    light: ['wallpapers/light/1.jpg'],
-    dark: ['wallpapers/dark/1.jpg']
+```json
+{
+  "theme": "auto",
+  "keybinds": { "quickLauncherOpen": "Mod+K" },
+  "miniBrowser": { "enable": false },
+  "backgrounds": {
+    "light": ["wallpapers/light/1.jpg"],
+    "dark": ["wallpapers/dark/1.jpg"]
   },
-  sections: [
+  "sections": [
     {
-      title: 'Daily',
-      links: [
-        { label: 'Tickets', url: 'https://tickets.example.com', icon: '🎫' },
-        { label: 'Mail', url: 'https://outlook.office.com/mail', icon: '📧' }
+      "title": "Daily",
+      "links": [
+        { "label": "Tickets", "url": "https://tickets.example.com", "icon": "🎫" },
+        { "label": "Mail", "url": "https://outlook.office.com/mail", "icon": "📧" }
       ]
     }
   ]
-};
+}
 ```
+
+Alternatively, you can still use `config.js` (git-ignored) to define `window.DASHBOARD_CONFIG` with the same shape.
 
 Serve the folder (recommended) and open `http://localhost:8000`:
 

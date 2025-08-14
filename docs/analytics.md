@@ -4,10 +4,10 @@ When enabled, the app records simple usage counts in `localStorage` on the clien
 
 ## Enabling
 
-```js
-window.DASHBOARD_CONFIG = {
-  analytics: { enableLocal: true }
-};
+```json
+{
+  "analytics": { "enableLocal": true }
+}
 ```
 
 ## What is stored

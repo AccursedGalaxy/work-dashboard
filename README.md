@@ -27,10 +27,11 @@ Minimal, fast, and elegant personal start page for work. It gives you:
 
 ## How it works
 
-At load time, `app.js` merges three config sources in order with a deep-merge strategy:
+At load time, `app.js` merges config sources in order with a deep-merge strategy:
 1. Built-in defaults defined in code
 2. `window.DASHBOARD_DEFAULT_CONFIG` from `config.example.js`
-3. Your overrides from `window.DASHBOARD_CONFIG` in `config.js`
+3. File-based config if present: `config.json` or `config.yaml`/`config.yml`
+4. Your overrides from `window.DASHBOARD_CONFIG` in `config.js` (optional)
 
 Then it initializes:
 
@@ -52,13 +53,12 @@ Security-conscious defaults:
 ## Quick start
 
 1. Clone/download this project.
-2. Copy config and customize:
-  - Copy `config.example.js` → `config.js`
-  - Edit `config.js` and set your links, and wallpapers
-  - To disable the mini browser entirely, set:
-    ```js
-    window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };
-    ```
+2. Choose a config method and customize:
+  - Easiest: create `config.json` (or `config.yaml`) in the project root and add only the fields you want to change
+  - Alternative: copy `config.example.js` → `config.js` and edit it (kept out of git)
+  - To disable the mini browser entirely, set the field in your config:
+    - JSON/YAML: `{ "miniBrowser": { "enable": false } }`
+    - JS: `window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };`
 3. Open it:
   - Easiest: open `index.html` directly in your browser
   - Recommended: serve locally for a proper origin (helps with CSP, caching, and PWA)
@@ -81,7 +81,7 @@ Security-conscious defaults:
 - **Focus Google**: /
 - **Focus `go/`**: g
 
-You can change these in `config.js` under `keybinds`.
+You can change these in `config.json`/`config.yaml` under `keybinds` (or in `config.js`).
 
 ---
 
@@ -119,6 +119,7 @@ To disable PWA, remove the `<link rel="manifest">` and service worker registrati
 - `index.html` — HTML structure, CSP, widgets, overlays
 - `styles.css` — UI styling, light/dark themes, mini browser, Quick Launcher
 - `config.example.js` — default config (reference only; do not edit)
+- `config.json` / `config.yaml` — file-based config (optional)
 - `config.js` — your private overrides (ignored by git)
 - `src/app.ts` — TypeScript source for client app
 - `src/sw.ts` — TypeScript source for service worker
@@ -130,7 +131,7 @@ To disable PWA, remove the `<link rel="manifest">` and service worker registrati
 
 ## Privacy
 
-No external analytics. If `analytics.enableLocal` is true in your `config.js`, simple usage counters are stored in `localStorage` only and used to improve Quick Launcher ranking on your device.
+No external analytics. If `analytics.enableLocal` is true in your `config.json`/`config.yaml` (or `config.js`), simple usage counters are stored in `localStorage` only and used to improve Quick Launcher ranking on your device.
 
 ---
 
