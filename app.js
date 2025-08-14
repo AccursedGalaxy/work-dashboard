@@ -1,6 +1,25 @@
 (function () {
     let config;
     let backgroundCycler = null;
+    /**
+     * Initialize the dashboard: assemble configuration and wire up UI features.
+     *
+     * Reads default, file, and user configuration from globals (window.DASHBOARD_DEFAULT_CONFIG,
+     * window.__FILE_CONFIG__, window.DASHBOARD_CONFIG), deep-merges them with built-in defaults
+     * (fileConfig takes precedence over defaults, and userConfig overrides both), and stores the
+     * result in the module-scoped `config` variable.
+     *
+     * After merging config, this function performs global initialization side effects:
+     * - Initializes theme handling (initTheme) and binds the theme toggle.
+     * - Creates and starts the background cycler for configured backgrounds.
+     * - Renders link sections and binds Google/Go search forms.
+     * - Configures the mini-browser, global keyboard shortcuts, quick launcher, and keybinds widget.
+     * - Sets initial focus for keyboard interactions.
+     * - Sets up the PWA install prompt and registers the service worker.
+     *
+     * This function does not return a value. It relies on several global helper functions and
+     * mutates module-scoped state (notably `config` and `backgroundCycler`).
+     */
     function start() {
         const defaultConfig = window.DASHBOARD_DEFAULT_CONFIG || {};
         const fileConfig = window.__FILE_CONFIG__ || {};
@@ -78,6 +97,16 @@
     else {
         start();
     }
+    /**
+     * Deeply merges any number of plain objects into a new object.
+     *
+     * Performs a left-to-right merge: properties from later arguments override earlier ones.
+     * Nested plain objects are merged recursively. Arrays are shallow-copied (not concatenated).
+     * Non-object or falsy arguments are ignored. Inputs are not mutated; a new object is returned.
+     *
+     * @param {...Object} objs - Source objects to merge (processed left-to-right).
+     * @return {Object} The merged result.
+     */
     function mergeDeep(...objs) {
         const result = {};
         for (const obj of objs) {

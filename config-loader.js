@@ -1,4 +1,12 @@
 (function () {
+    /**
+     * Remove a shell/YAML-style comment (`#...`) from a single line, ignoring `#` characters that appear inside single or double quotes.
+     *
+     * The function preserves quoted text and toggles quote state on unescaped single or double quote characters. It returns the input line truncated at the first `#` that is not inside a quote; if no such `#` exists, the original line is returned unchanged.
+     *
+     * @param {string} line - A single line of text to strip comments from.
+     * @return {string} The line with any unquoted trailing comment removed.
+     */
     function stripComments(line) {
         var out = '';
         var inSingle = false;
@@ -22,6 +30,17 @@
         }
         return out;
     }
+    /**
+     * Parse a YAML-like scalar token into a JavaScript primitive.
+     *
+     * Trims whitespace, returns an empty string for blank input, removes surrounding
+     * single or double quotes, maps `null` (plus `Null`, `NULL`) and `~` to null,
+     * maps common true/false variants to booleans, converts numeric-looking
+     * strings to Numbers, and otherwise returns the trimmed string as-is.
+     *
+     * @param {string} raw - The raw scalar text to parse.
+     * @returns {string|number|boolean|null} The parsed primitive value.
+     */
     function parseScalar(raw) {
         var s = raw.trim();
         if (!s.length) return '';
@@ -35,6 +54,21 @@
         if (!isNaN(Number(s))) return Number(s);
         return s;
     }
+    /**
+     * Parse a small, indentation-based YAML-like string into plain JavaScript objects/arrays.
+     *
+     * This is a lightweight fallback YAML parser (not a full YAML implementation). It supports:
+     * - Indentation-based nesting of maps and sequences (maps are plain objects, sequences are arrays).
+     * - Sequence items starting with `-`, including inline scalars (e.g. `- value`) and inline mappings (e.g. `- key: value`).
+     * - Mapping entries using `key: value` and nested maps when the value is omitted.
+     * - Bare scalars assigned to the most recent mapping key.
+     * - Stripping of line comments (handled by the surrounding file's `stripComments`).
+     *
+     * Limitations: does not implement full YAML features (anchors, complex types, multi-line literals, tags, flow collections, etc.).
+     *
+     * @param {string} text - YAML-like content to parse (CRLF and LF line endings supported).
+     * @returns {Object} A plain JavaScript object representing the parsed document. If the top-level document is a sequence, an object of the shape `{ items: [...] }` is returned.
+     */
     function parseYamlLite(text) {
         var lines = text.replace(/\r\n?/g, '\n').split('\n');
         var root = {};
@@ -75,7 +109,7 @@
                         // already a list
                     } else if (!cur.key) {
                         // anonymous top-level list not expected; create if root empty
-                        if (stack.length === ROOT_STACK_DEPTH && Object.keys(cur.node).length === 0) {
+                        if (stack.length === 1 && Object.keys(cur.node).length === 0) {
                             // replace root with list
                             var newArr = [];
                             stack[0] = { indent: -1, type: 'seq', node: newArr, key: null };
@@ -83,8 +117,7 @@
                         } else {
                             // fallback: create temp list under "items"
                             cur.node.items = cur.node.items || [];
-                            cur.node[ANONYMOUS_LIST_KEY] = cur.node[ANONYMOUS_LIST_KEY] || [];
-                            stack.push({ indent: indent - 2, type: 'seq', node: cur.node[ANONYMOUS_LIST_KEY], key: null });
+                            stack.push({ indent: indent - 2, type: 'seq', node: cur.node.items, key: null });
                             cur = getTop();
                         }
                     } else {
@@ -154,35 +187,54 @@
                 continue;
             }
         }
-        return Array.isArray(stack[0].node) ? { [ITEMS_KEY]: stack[0].node } : stack[0].node;
+        return Array.isArray(stack[0].node) ? { items: stack[0].node } : stack[0].node;
     }
+    /**
+     * Safely parse a JSON string, returning the parsed value or null on failure.
+     * @param {string} text - JSON text to parse.
+     * @return {any|null} The parsed value, or null if parsing fails.
+     */
     function tryJsonParse(text) {
         try { return JSON.parse(text); } catch (_) { return null; }
     }
+    /**
+     * Detect whether the global js-yaml library is available.
+     *
+     * Checks for a `window.jsyaml` object with a callable `load` method.
+     * @return {boolean} True if `window.jsyaml.load` exists and is a function, otherwise false.
+     */
     function hasJsYaml() {
         return !!(window.jsyaml && typeof window.jsyaml.load === 'function');
     }
+    /**
+     * Parse YAML text into a JavaScript value, using js-yaml if available.
+     *
+     * If the global `window.jsyaml.load` function is present this delegates to it;
+     * otherwise it uses the built-in lightweight YAML parser. Returns the parsed
+     * value (object, array, string, number, etc.) on success. If parsing fails
+     * the function returns `null`.
+     *
+     * @param {string} text - YAML or YAML-like text to parse.
+     * @return {*} The parsed value, or `null` if parsing failed.
+     */
     function parseYaml(text) {
         try {
-    function getJsYaml() {
-        if (window.jsyaml && typeof window.jsyaml.load === 'function') return window.jsyaml;
-        if (window.jsYaml && typeof window.jsYaml.load === 'function') return window.jsYaml;
-        if (window['js-yaml'] && typeof window['js-yaml'].load === 'function') return window['js-yaml'];
-        return null;
-    }
-    function hasJsYaml() {
-        return !!getJsYaml();
-    }
-    function parseYaml(text) {
-        try {
-            var jsYaml = getJsYaml();
-            if (jsYaml) return jsYaml.load(text);
+            if (hasJsYaml()) return window.jsyaml.load(text);
             return parseYamlLite(text);
         } catch (e) {
             console.warn('[config] YAML parse failed; falling back to empty object', e);
             return null;
         }
     }
+    /**
+     * Fetch text content from a URL, returning null on failure.
+     *
+     * Attempts a network fetch (cache: 'no-store') and resolves to the response body as a string
+     * when the response is OK (2xx). Returns null if the fetch fails, throws, or the response is not OK.
+     *
+     * @param {string} url - The resource URL to fetch.
+     * @returns {Promise<string|null>} The response text on success, or null on failure.
+     */
     async function fetchText(url) {
         try {
             var resp = await fetch(url, { cache: 'no-store' });
@@ -190,6 +242,17 @@
             return await resp.text();
         } catch (_) { return null; }
     }
+    /**
+     * Load configuration from disk by trying known candidate files and return the first parsed object.
+     *
+     * Attempts to fetch and parse, in order, `config.json` (JSON), `config.yaml` (YAML), and `config.yml` (YAML).
+     * For each candidate: if the file is successfully fetched, the content is parsed according to its type;
+     * the first successfully parsed value that is an object is returned. If a file is found but cannot be parsed,
+     * a warning is emitted and the loader continues to the next candidate. If none yield an object, an empty
+     * object is returned.
+     *
+     * @returns {Promise<Object>} A promise that resolves to the configuration object (never null; may be an empty object).
+     */
     async function loadFileConfig() {
         var candidates = [
             { path: 'config.json', type: 'json' },
