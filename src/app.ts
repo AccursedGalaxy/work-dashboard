@@ -1,6 +1,416 @@
 (function () {
   let config: any;
   let backgroundCycler: { setTheme: (t: string) => void } | null = null;
+  // ===== Command DSL helpers =====
+  function normalizeSmartQuotes(s: string) {
+    return String(s || '')
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'");
+  }
+
+  function tokenizeCommand(input: string) {
+    const text = normalizeSmartQuotes(input);
+    const tokens = [];
+    let current = '';
+    let inSingle = false, inDouble = false, escaped = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === "'" && !inDouble) {
+        inSingle = !inSingle;
+        continue;
+      }
+      if (char === '"' && !inSingle) {
+        inDouble = !inDouble;
+        continue;
+      }
+      if (!inSingle && !inDouble && /\s/.test(char)) {
+        if (current) {
+          tokens.push(current);
+          current = '';
+        }
+        continue;
+      }
+      current += char;
+    }
+    if (current) tokens.push(current);
+    return tokens;
+  }
+
+  function buildTokenRegexFromPatternToken(patternToken: string) {
+    let out = '';
+    let i = 0;
+    while (i < patternToken.length) {
+      if (patternToken[i] === '{') {
+        const close = patternToken.indexOf('}', i);
+        if (close === -1) {
+          out += patternToken.slice(i);
+          break;
+        }
+        out += '(.+?)';
+        i = close + 1;
+      } else {
+        const char = patternToken[i];
+        if (/[.*+?^${}()|[\]\\]/.test(char)) out += '\\' + char;
+        else out += char;
+        i++;
+      }
+    }
+    return new RegExp('^' + out + '$');
+  }
+
+  function matchPattern(pattern: string, inputTokens: string[]) {
+    const pTokens = tokenizeCommand(pattern);
+    if (pTokens.length > inputTokens.length) return { ok: false };
+    
+    const vars: any = {};
+    for (let j = 0; j < pTokens.length; j++) {
+      const regex = buildTokenRegexFromPatternToken(pTokens[j]);
+      const m2 = inputTokens[j].match(regex);
+      if (!m2) return { ok: false };
+      const varNames2 = (pTokens[j].match(/\{([^}]+)\}/g) || []).map(x => x.slice(1, -1).trim());
+      for (let k2 = 0; k2 < varNames2.length; k2++) vars[varNames2[k2]] = m2[k2 + 1];
+    }
+    return { ok: true, vars: vars, usedTokens: pTokens.length };
+  }
+
+  function parseCommandSegment(segment: string, cfg: any) {
+    const raw = String(segment || '').trim();
+    if (!raw) return [];
+    
+    const dsl = (cfg && cfg.commandDsl) || {};
+    const templates = (dsl && dsl.templates) || {};
+    const macros = (dsl && dsl.macros) || {};
+    const defaults = (dsl && dsl.defaults) || {};
+    
+    const tokens = tokenizeCommand(raw);
+    if (!tokens.length) return [];
+    
+    // Special: go alias uses existing resolver
+    if (tokens[0].toLowerCase() === 'go') {
+      const key = tokens.slice(1).join(' ').trim();
+      if (!key) return [];
+      const href = resolveGoKey(cfg.go || {}, key);
+      return [{ kind: 'url', label: 'go ' + key, url: href, icon: '🏷️' }];
+    }
+    
+    // Shorthand: pr NUM using defaultRepo
+    if (tokens[0].toLowerCase() === 'pr' && tokens.length === 2 && defaults.defaultRepo) {
+      const num = tokens[1];
+      const fullCmd = `gh ${defaults.defaultRepo} pr ${num}`;
+      const recursed = parseCommandSegment(fullCmd, cfg);
+      return recursed.length ? recursed : [];
+    }
+    
+    // Try templates
+    for (const pattern of Object.keys(templates)) {
+      const result = matchPattern(pattern, tokens);
+      if (result.ok && result.usedTokens === tokens.length) {
+        let url = templates[pattern];
+        for (const varName of Object.keys(result.vars)) {
+          const val = result.vars[varName];
+          if (varName === 'urlencode') continue; // special function
+          url = url.replace(new RegExp(`\\{${varName}\\}`, 'g'), val);
+        }
+        // Handle urlencode function
+        url = url.replace(/\{urlencode\(([^)]+)\)\}/g, (_, expr) => {
+          const varName = expr.trim();
+          return encodeURIComponent(result.vars[varName] || '');
+        });
+        return [{ kind: 'url', label: raw, url: url, icon: '🔗' }];
+      }
+    }
+    
+    // Try macros
+    for (const pattern of Object.keys(macros)) {
+      const result = matchPattern(pattern, tokens);
+      if (result.ok && result.usedTokens === tokens.length) {
+        const expansions = macros[pattern];
+        const targets = [];
+        for (const expansion of expansions) {
+          let expanded = expansion;
+          for (const varName of Object.keys(result.vars)) {
+            expanded = expanded.replace(new RegExp(`\\{${varName}\\}`, 'g'), result.vars[varName]);
+          }
+          const subTargets = parseCommandSegment(expanded, cfg);
+          targets.push(...subTargets);
+        }
+        return targets;
+      }
+    }
+    
+    return [];
+  }
+
+  function parseCommandDsl(raw: string, cfg: any) {
+    const text = String(raw || '').trim();
+    if (!text) return { targets: [], label: '' };
+    
+    // Split on '|' while honoring quotes and backslash escapes
+    function splitPipes(s: string) {
+      const out = [], cur = [''], inS = [false], inD = [false], esc = [false];
+      let depth = 0;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (esc[depth]) { cur[depth] += ch; esc[depth] = false; continue; }
+        if (ch === '\\') { esc[depth] = true; continue; }
+        if (ch === '"' && !inS[depth]) { inD[depth] = !inD[depth]; continue; }
+        if (ch === "'" && !inD[depth]) { inS[depth] = !inS[depth]; continue; }
+        if (ch === '|' && !inS[depth] && !inD[depth]) {
+          out.push(cur[depth].trim());
+          cur[depth] = '';
+          continue;
+        }
+        cur[depth] += ch;
+      }
+      if (cur[depth]) out.push(cur[depth].trim());
+      return out.filter(Boolean);
+    }
+    
+    const parts = splitPipes(text);
+    const all = [];
+    for (const part of parts) {
+      const segTargets = parseCommandSegment(part, cfg);
+      all.push(...segTargets);
+    }
+    return { targets: all, label: text };
+  }
+
+  function runCommandTargets(cmd: any, openAll: boolean, cfg: any) {
+    const targets = (cmd && cmd.targets) || [];
+    if (!targets.length) return;
+    
+    // Analytics for commands
+    if ((config as any).analytics && (config as any).analytics.enableLocal) {
+      try { 
+        incrementLocalCount('cmd:' + (cmd.label || ''));
+        
+        // Learn partial patterns for smart suggestions
+        learnCommandPatterns(cmd.label || '');
+      } catch (_) { }
+    }
+    
+    const toOpen = openAll ? targets : [targets[0]];
+    for (const t of toOpen) {
+      if (!t) continue;
+      if (t.kind === 'url') {
+        window.open(t.url, '_blank', 'noopener,noreferrer');
+      } else if (t.kind === 'action' && t.action === 'timer') {
+        startFocusTimer(typeof t.minutes === 'number' ? t.minutes : 25);
+      }
+    }
+  }
+
+  function startFocusTimer(minutes: number) {
+    const ms = Math.max(1, Math.floor(minutes)) * 60 * 1000;
+    // Timer implementation would go here
+    console.log(`Starting ${minutes} minute focus timer`);
+  }
+
+  // ===== Smart Pattern Learning =====
+  function learnCommandPatterns(commandText: string) {
+    if (!commandText || commandText.length < 3) return;
+    
+    try {
+      const patterns = readCommandPatterns();
+      const command = commandText.trim();
+      const now = Date.now();
+      
+      // Extract meaningful partial patterns (3+ chars, not just single words)
+      const partials = extractPartialPatterns(command);
+      
+      for (const partial of partials) {
+        if (!patterns[partial]) {
+          patterns[partial] = [];
+        }
+        
+        // Find existing entry for this command
+        let entry = patterns[partial].find((e: any) => e.command === command);
+        if (entry) {
+          entry.count++;
+          entry.lastUsed = now;
+        } else {
+          patterns[partial].push({
+            command: command,
+            count: 1,
+            lastUsed: now
+          });
+        }
+        
+        // Keep only top 5 commands per partial pattern
+        patterns[partial].sort((a: any, b: any) => b.count - a.count);
+        patterns[partial] = patterns[partial].slice(0, 5);
+      }
+      
+      // Clean up old patterns (older than 30 days with low usage)
+      cleanupOldPatterns(patterns);
+      
+      localStorage.setItem('command-patterns', JSON.stringify(patterns));
+    } catch (_) {}
+  }
+
+  function extractPartialPatterns(command: string): string[] {
+    const partials = new Set<string>();
+    const text = command.toLowerCase();
+    
+    // Extract meaningful substrings
+    for (let i = 0; i <= text.length - 3; i++) {
+      for (let j = i + 3; j <= text.length; j++) {
+        const substring = text.slice(i, j);
+        
+        // Skip if starts/ends with special chars or spaces
+        if (/^[^a-z0-9]|[^a-z0-9]$/.test(substring)) continue;
+        
+        // Include patterns that are likely search terms
+        if (substring.length >= 3 && substring.length <= 15) {
+          partials.add(substring);
+        }
+      }
+    }
+    
+    // Also extract word-based patterns
+    const words = text.match(/[a-z0-9]+/g) || [];
+    for (const word of words) {
+      if (word.length >= 3) {
+        partials.add(word);
+      }
+    }
+    
+    return Array.from(partials);
+  }
+
+  function cleanupOldPatterns(patterns: any) {
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    
+    for (const partial of Object.keys(patterns)) {
+      patterns[partial] = patterns[partial].filter((entry: any) => {
+        // Keep if used recently OR has high usage
+        return entry.lastUsed > thirtyDaysAgo || entry.count >= 5;
+      });
+      
+      // Remove empty patterns
+      if (patterns[partial].length === 0) {
+        delete patterns[partial];
+      }
+    }
+  }
+
+  function readCommandPatterns() {
+    try {
+      const raw = localStorage.getItem('command-patterns');
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) { 
+      return {}; 
+    }
+  }
+
+  function getLearnedCommandSuggestions(q: string, cfg: any) {
+    const query = String(q || '').trim();
+    if (!query) return [];
+    
+    try {
+      const counts = readCounts();
+      const patterns = readCommandPatterns();
+      const qq = query.toLowerCase();
+      const items = [];
+      
+      // First, check learned patterns for smart suggestions
+      const patternSuggestions = getPatternBasedSuggestions(qq, patterns, cfg);
+      items.push(...patternSuggestions);
+      
+      // Then, check traditional command history
+      Object.keys(counts).forEach((key) => {
+        if (key.indexOf('cmd:') !== 0) return;
+        
+        const label = key.slice(4);
+        if (!label) return;
+        
+        // Avoid duplicating the exact typed command suggestion
+        if (label.toLowerCase() === qq) return;
+        
+        const parsed = parseCommandDsl(label, cfg);
+        if (!parsed || !parsed.targets || !parsed.targets.length) return;
+        
+        const count = counts[key] | 0;
+        const base = label.toLowerCase();
+        const score = fuzzyScore(qq, base) + (base.startsWith(qq) ? 2 : 0) + Math.min(5, count / 5);
+        
+        if (score <= 0) return;
+        
+        const first = parsed.targets[0];
+        items.push({
+          id: 'cmd:' + label,
+          label: 'Run again: ' + label,
+          icon: (first && first.icon) || '⚡',
+          url: (first && first.url) || '',
+          type: 'cmd',
+          section: 'command',
+          searchText: base,
+          __cmd: parsed,
+          __score: score
+        });
+      });
+      
+      items.sort((a, b) => (b.__score || 0) - (a.__score || 0));
+      
+      // Strip internal score before returning and cap to top 3
+      return items.slice(0, 3).map((it) => {
+        delete it.__score;
+        return it;
+      });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getPatternBasedSuggestions(query: string, patterns: any, cfg: any) {
+    const suggestions = [];
+    const now = Date.now();
+    
+    // Find patterns that match the query
+    for (const partial of Object.keys(patterns)) {
+      if (partial.includes(query) || query.includes(partial)) {
+        const entries = patterns[partial];
+        
+        for (const entry of entries) {
+          // Calculate pattern-based score
+          const recencyBonus = Math.max(0, 5 - (now - entry.lastUsed) / (7 * 24 * 60 * 60 * 1000)); // Decay over 7 days
+          const frequencyBonus = Math.min(10, entry.count);
+          const matchQuality = partial === query ? 10 : (partial.startsWith(query) ? 5 : 2);
+          const score = matchQuality + frequencyBonus + recencyBonus;
+          
+          // Parse the command to make sure it's still valid
+          const parsed = parseCommandDsl(entry.command, cfg);
+          if (!parsed || !parsed.targets || !parsed.targets.length) continue;
+          
+          const first = parsed.targets[0];
+          suggestions.push({
+            id: 'cmd:' + entry.command,
+            label: entry.command,
+            icon: (first && first.icon) || '💡',
+            url: (first && first.url) || '',
+            type: 'cmd',
+            section: 'smart',
+            searchText: entry.command.toLowerCase(),
+            __cmd: parsed,
+            __score: score
+          });
+        }
+      }
+    }
+    
+    return suggestions;
+  }
+
   /**
    * Build the runtime configuration by merging defaults, file-level, and user overrides, then initialize the dashboard.
    *
@@ -61,7 +471,33 @@
             { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
           ]
         }
-      ]
+      ],
+      commandDsl: {
+        templates: {
+          'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
+          'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
+          'gh code {q}': 'https://github.com/search?q={urlencode(q)}&type=code',
+          'gh {owner}/{repo}': 'https://github.com/{owner}/{repo}',
+          'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
+          'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
+          'yt {q}': 'https://www.youtube.com/results?search_query={urlencode(q)}',
+          'aur {q}': 'https://aur.archlinux.org/packages?K={urlencode(q)}',
+          'wiki {q}': 'https://en.wikipedia.org/w/index.php?search={urlencode(q)}',
+          'r/{sub}': 'https://www.reddit.com/r/{sub}/',
+          'npm {pkg}': 'https://www.npmjs.com/package/{pkg}',
+          'unpkg {pkg}': 'https://unpkg.com/browse/{pkg}/',
+          'bp {pkg}': 'https://bundlephobia.com/package/{pkg}',
+          'go {key}': ''
+        },
+        macros: {
+          'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}']
+        },
+        defaults: {
+          defaultRepo: '',
+          defaultTrackerPrefix: '',
+          trackerUrl: ''
+        }
+      }
     }, defaultConfig, fileConfig, userConfig);
 
     initTheme(config.theme);
@@ -505,6 +941,9 @@
       }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
       scored.sort(function (a, b) { return b.score - a.score; });
 
+      // Get smart command suggestions based on learned patterns
+      const learned = q ? getLearnedCommandSuggestions(q, cfg) : [];
+
       // Dynamic go/ search suggestion
       let suggestion: any = null;
       if (q && cfg.go && cfg.go.fallbackSearchUrl) {
@@ -518,8 +957,12 @@
         };
       }
 
-      // Show regular results first; put dynamic go-search suggestion after them
-      currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
+      // Combine results: smart suggestions first, then regular results, then go search
+      currentResults = [];
+      if (learned && learned.length) {
+        currentResults = learned.concat(currentResults);
+      }
+      currentResults = currentResults.concat(scored.slice(0, 50).map(function (r) { return r.item; }));
       if (suggestion) currentResults.push(suggestion);
       selectedIndex = 0;
       list.innerHTML = '';
@@ -547,6 +990,8 @@
           key = it.id; // exact query-specific counter for go-search suggestions
         } else if (it && it.type === 'go') {
           key = 'go:' + it.label;
+        } else if (it && it.type === 'cmd' && typeof it.id === 'string') {
+          key = it.id.replace(/^cmd:/, 'cmd:');
         } else {
           key = 'link:' + it.label;
         }
@@ -568,11 +1013,24 @@
           } else if (it && it.type === 'go-search' && typeof it.id === 'string') {
             // Count the exact search query used from the Quick Launcher suggestion
             incrementLocalCount(it.id);
+          } else if (it && it.type === 'cmd' && it.__cmd) {
+            // Handle command execution
+            runCommandTargets(it.__cmd, false, cfg);
+            close();
+            return;
           } else {
             incrementLocalCount('link:' + it.label);
           }
         } catch (_) {}
       }
+      
+      // Handle command execution even without analytics
+      if (it && it.type === 'cmd' && it.__cmd) {
+        runCommandTargets(it.__cmd, false, cfg);
+        close();
+        return;
+      }
+      
       window.open(it.url, '_blank', 'noopener,noreferrer');
       close();
     }
@@ -583,7 +1041,39 @@
       if (matchesKey(e as any, cfg.keybinds.quickLauncherClose)) { e.preventDefault(); close(); return; }
       if (matchesKey(e as any, cfg.keybinds.quickLauncherNext)) { e.preventDefault(); move(1); return; }
       if (matchesKey(e as any, cfg.keybinds.quickLauncherPrev)) { e.preventDefault(); move(-1); return; }
-      if (matchesKey(e as any, cfg.keybinds.quickLauncherOpenInTab)) { e.preventDefault(); if (currentResults[selectedIndex]) openItem(currentResults[selectedIndex]); }
+      if (matchesKey(e as any, cfg.keybinds.quickLauncherOpenInTab)) { 
+        e.preventDefault(); 
+        const sel = currentResults[selectedIndex];
+        if (sel) {
+          // Handle command execution with shift key (open all targets)
+          if (sel.type === 'cmd' && sel.__cmd) {
+            runCommandTargets(sel.__cmd, !!e.shiftKey, cfg);
+            close();
+            return;
+          }
+          // Otherwise prefer the selection if present
+          if (sel) {
+            openItem(sel);
+            return;
+          }
+        }
+        
+        // Fallback: parse and run as command if it resolves
+        const q = input.value.trim();
+        const parsed = q ? parseCommandDsl(q, cfg) : { targets: [] };
+        if (parsed && parsed.targets && parsed.targets.length) {
+          runCommandTargets(parsed, !!e.shiftKey, cfg);
+          close();
+          return;
+        }
+        
+        // Finally, try learned command suggestions based on history
+        const learned = getLearnedCommandSuggestions(q, cfg);
+        if (learned && learned.length && learned[0] && learned[0].__cmd) {
+          runCommandTargets(learned[0].__cmd, !!e.shiftKey, cfg);
+          close();
+        }
+      }
     });
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
 
