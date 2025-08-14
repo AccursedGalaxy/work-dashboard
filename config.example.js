@@ -5,7 +5,7 @@
 window.DASHBOARD_DEFAULT_CONFIG = {
   theme: 'auto', // 'dark' | 'light' | 'auto'
   keybinds: {
-    quickLauncherOpen: 'Mod+K',
+    quickLauncherOpen: 'k',
     toggleTheme: 't',
     focusGoogle: '/',
     focusGo: 'g',
@@ -28,8 +28,8 @@ window.DASHBOARD_DEFAULT_CONFIG = {
     ]
   },
   miniBrowser: {
-    // Set to false to hide and fully disable the mini browser UI and embedding
-    enable: true,
+    // Set to true to show and enable the mini browser UI and embedding
+    enable: false,
     // Initial URL for the mini browser input and iframe
     defaultUrl: 'https://www.google.com/webhp?igu=1'
   },
