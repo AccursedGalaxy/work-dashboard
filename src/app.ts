@@ -67,6 +67,7 @@
     initTheme(config.theme);
       backgroundCycler = createBackgroundCycler(config.backgrounds);
   bindThemeToggle(backgroundCycler);
+    applyUiConfig(config as any);
     renderSections(config.sections);
     bindGoogleForm(config.google);
     bindGoForm(config.go);
@@ -457,6 +458,20 @@
     }
   }
 
+  // Apply optional UI overrides from configuration (non-destructive; keeps HTML defaults when unspecified)
+  function applyUiConfig(cfg: any) {
+    try {
+      const ui = (cfg && (cfg as any).ui) || {};
+      // go/ card title
+      if (ui && typeof ui.goTitle === 'string' && ui.goTitle.trim()) {
+        const form = document.getElementById('goForm');
+        const card = form ? form.closest('.card') as HTMLElement | null : null;
+        const h2 = card ? card.querySelector('h2') as HTMLElement | null : null;
+        if (h2) h2.textContent = ui.goTitle;
+      }
+    } catch (_) { /* no-op */ }
+  }
+
   // ===== Quick Launcher =====
   function initQuickLauncher(cfg: any) {
     const overlay = document.getElementById('quick-launcher');
@@ -650,17 +665,23 @@
 
   function bindGlobalShortcuts(keys: any) {
     document.addEventListener('keydown', function (e) {
-      // Open/close quick launcher — allow even when typing inside inputs
+      const overlay = document.getElementById('quick-launcher');
+      const isQlOpen = !!(overlay && overlay.classList.contains('is-open'));
+
+      // When the Quick Launcher is open, swallow all global shortcuts except its explicit close key
+      if (isQlOpen) {
+        if (matchesKey(e as any, keys.quickLauncherClose)) {
+          e.preventDefault();
+          if ((window as any).__closeQuickLauncher) (window as any).__closeQuickLauncher();
+        }
+        return;
+      }
+
+      // Open quick launcher — allow even when typing inside inputs
       if (matchesKey(e, keys.quickLauncherOpen)) {
-        // Prevent key auto-repeat from immediately toggling open/close when using single-letter bindings
         if ((e as any).repeat) { e.preventDefault(); return; }
         e.preventDefault();
-        var overlay = document.getElementById('quick-launcher');
-        if (overlay && overlay.classList.contains('is-open')) {
-          if ((window as any).__closeQuickLauncher) (window as any).__closeQuickLauncher();
-        } else {
-          if ((window as any).__openQuickLauncher) (window as any).__openQuickLauncher();
-        }
+        if ((window as any).__openQuickLauncher) (window as any).__openQuickLauncher();
         return;
       }
       if (isTypingInInput(e)) return;

@@ -2,23 +2,9 @@
     let config;
     let backgroundCycler = null;
     /**
-     * Initialize the dashboard: assemble configuration and wire up UI features.
+     * Build the runtime configuration by merging defaults, file-level, and user overrides, then initialize the dashboard.
      *
-     * Reads default, file, and user configuration from globals (window.DASHBOARD_DEFAULT_CONFIG,
-     * window.__FILE_CONFIG__, window.DASHBOARD_CONFIG), deep-merges them with built-in defaults
-     * (fileConfig takes precedence over defaults, and userConfig overrides both), and stores the
-     * result in the module-scoped `config` variable.
-     *
-     * After merging config, this function performs global initialization side effects:
-     * - Initializes theme handling (initTheme) and binds the theme toggle.
-     * - Creates and starts the background cycler for configured backgrounds.
-     * - Renders link sections and binds Google/Go search forms.
-     * - Configures the mini-browser, global keyboard shortcuts, quick launcher, and keybinds widget.
-     * - Sets initial focus for keyboard interactions.
-     * - Sets up the PWA install prompt and registers the service worker.
-     *
-     * This function does not return a value. It relies on several global helper functions and
-     * mutates module-scoped state (notably `config` and `backgroundCycler`).
+     * This performs the app startup: it composes the final `config` (deep-merged from built-in defaults, a file-provided config, and any user config on window), applies the initial theme, creates and wires the background cycler, renders link sections, binds forms and UI features (Google/Go forms, mini-browser, global shortcuts, quick launcher, keybind help), sets initial focus, and registers PWA/install and service worker hooks. Side effects include writing to global `config` and `backgroundCycler` and attaching many DOM event listeners.
      */
     function start() {
         const defaultConfig = window.DASHBOARD_DEFAULT_CONFIG || {};
@@ -80,6 +66,7 @@
         initTheme(config.theme);
         backgroundCycler = createBackgroundCycler(config.backgrounds);
         bindThemeToggle(backgroundCycler);
+        applyUiConfig(config);
         renderSections(config.sections);
         bindGoogleForm(config.google);
         bindGoForm(config.go);
@@ -98,14 +85,12 @@
         start();
     }
     /**
-     * Deeply merges any number of plain objects into a new object.
+     * Deeply merges multiple plain objects into a new object.
      *
-     * Performs a left-to-right merge: properties from later arguments override earlier ones.
-     * Nested plain objects are merged recursively. Arrays are shallow-copied (not concatenated).
-     * Non-object or falsy arguments are ignored. Inputs are not mutated; a new object is returned.
+     * Merges enumerable own properties from left-to-right: nested plain objects are merged recursively, arrays are shallow-copied, and primitive values from later arguments override earlier ones. Non-object or falsy arguments are ignored. The function operates on own keys only (no prototype merging) and returns a newly created object.
      *
-     * @param {...Object} objs - Source objects to merge (processed left-to-right).
-     * @return {Object} The merged result.
+     * @param objs - Objects to merge (later objects take precedence)
+     * @returns A new object containing the merged result
      */
     function mergeDeep(...objs) {
         const result = {};
@@ -498,6 +483,21 @@
             handleTL.addEventListener('mousedown', onDown);
         }
     }
+    // Apply optional UI overrides from configuration (non-destructive; keeps HTML defaults when unspecified)
+    function applyUiConfig(cfg) {
+        try {
+            const ui = (cfg && cfg.ui) || {};
+            // go/ card title
+            if (ui && typeof ui.goTitle === 'string' && ui.goTitle.trim()) {
+                const form = document.getElementById('goForm');
+                const card = form ? form.closest('.card') : null;
+                const h2 = card ? card.querySelector('h2') : null;
+                if (h2)
+                    h2.textContent = ui.goTitle;
+            }
+        }
+        catch (_) { /* no-op */ }
+    }
     // ===== Quick Launcher =====
     function initQuickLauncher(cfg) {
         const overlay = document.getElementById('quick-launcher');
@@ -729,23 +729,26 @@
     }
     function bindGlobalShortcuts(keys) {
         document.addEventListener('keydown', function (e) {
-            // Open/close quick launcher — allow even when typing inside inputs
+            const overlay = document.getElementById('quick-launcher');
+            const isQlOpen = !!(overlay && overlay.classList.contains('is-open'));
+            // When the Quick Launcher is open, swallow all global shortcuts except its explicit close key
+            if (isQlOpen) {
+                if (matchesKey(e, keys.quickLauncherClose)) {
+                    e.preventDefault();
+                    if (window.__closeQuickLauncher)
+                        window.__closeQuickLauncher();
+                }
+                return;
+            }
+            // Open quick launcher — allow even when typing inside inputs
             if (matchesKey(e, keys.quickLauncherOpen)) {
-                // Prevent key auto-repeat from immediately toggling open/close when using single-letter bindings
                 if (e.repeat) {
                     e.preventDefault();
                     return;
                 }
                 e.preventDefault();
-                var overlay = document.getElementById('quick-launcher');
-                if (overlay && overlay.classList.contains('is-open')) {
-                    if (window.__closeQuickLauncher)
-                        window.__closeQuickLauncher();
-                }
-                else {
-                    if (window.__openQuickLauncher)
-                        window.__openQuickLauncher();
-                }
+                if (window.__openQuickLauncher)
+                    window.__openQuickLauncher();
                 return;
             }
             if (isTypingInInput(e))
