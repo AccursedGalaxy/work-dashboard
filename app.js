@@ -637,7 +637,11 @@
                 if (ch === '\\') { esc = true; continue; }
                 if (ch === '"' && !inS) { inD = !inD; continue; }
                 if (ch === "'" && !inD) { inS = !inS; continue; }
-                if (ch === '|' && !inS && !inD) { out.push(cur.trim()); cur = ''; continue; }
+                if (ch === '|' && !inS && !inD) {
+                    out.push(cur.trim());
+                    cur = '';
+                    continue;
+                }
                 cur += ch;
             }
             if (cur) out.push(cur.trim());
