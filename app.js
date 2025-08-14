@@ -462,7 +462,9 @@
         };
       }
 
-      currentResults = (suggestion ? [suggestion] : []).concat(scored.slice(0, 50).map(function (r) { return r.item; }));
+      // Show regular results first; put dynamic go-search suggestion after them
+      currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
+      if (suggestion) currentResults.push(suggestion);
       selectedIndex = 0;
       list.innerHTML = '';
       currentResults.forEach(function (it, i) {
