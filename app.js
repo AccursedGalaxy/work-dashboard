@@ -1121,10 +1121,17 @@
                         }
                     }
                     else {
-                        const input = prompt('Paste URL containing #config=...');
+                        const input = prompt('Paste URL containing #config=… (full URL, “#config=…”, or “config=…” fragment)');
                         if (input) {
-                            const u = new URL(input);
-                            const parsed = readConfigFromHashString(u.hash || '');
+                            let rawHash = '';
+                            try {
+                                const u = new URL(input, window.location.href);
+                                rawHash = u.hash || '';
+                            }
+                            catch {
+                                rawHash = input.trim().startsWith('#') ? input.trim() : '#' + input.trim();
+                            }
+                            const parsed = readConfigFromHashString(rawHash);
                             if (parsed && isPlainObject(parsed)) {
                                 const check2 = validateConfigObject(parsed);
                                 if (!check2.valid) {
