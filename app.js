@@ -1037,6 +1037,10 @@
                 else if (it && it.type === 'go') {
                     key = 'go:' + it.label;
                 }
+                else if (it && it.type === 'cmd' && typeof it.id === 'string') {
+                    // Normalize to 'cmd:...' analytics key derived from the item's id
+                    key = it.id.replace(/^cmd:/, 'cmd:');
+                }
                 else {
                     key = 'link:' + it.label;
                 }
