@@ -983,37 +983,37 @@
       }
     });
 
-    if (loadFromUrlBtn) loadFromUrlBtn.addEventListener('click', async function () {
-      try {
-        const found = readConfigFromUrlHash();
-        if (found && isPlainObject(found)) {
-          const check = validateConfigObject(found);
-          if (!check.valid) { setStatus('URL config invalid: ' + check.errors.join('; '), true); clearConfigHashFromUrl(); return; }
-          const ok = confirm('Apply configuration from current URL?\n\n' + summarizeConfig(found));
-          if (ok) {
-            applyRuntimeOverride(found, true);
-            clearConfigHashFromUrl();
-            window.location.reload();
+    } else {
+      const input = prompt('Paste URL containing #config=… (full URL, “#config=…”, or “config=…” fragment)');
+      if (input) {
+        let rawHash = '';
+        try {
+          // Full URL or relative reference
+          const u = new URL(input, window.location.href);
+          rawHash = u.hash || '';
+        } catch {
+          // Bare hash or config fragment
+          rawHash = input.trim().startsWith('#')
+            ? input.trim()
+            : '#' + input.trim();
+        }
+        const parsed = readConfigFromHashString(rawHash);
+        if (parsed && isPlainObject(parsed)) {
+          const check2 = validateConfigObject(parsed);
+          if (!check2.valid) {
+            setStatus('URL config invalid: ' + check2.errors.join('; '), true);
+            return;
+          }
+          const ok2 = confirm('Apply configuration from pasted URL?\n\n' + summarizeConfig(parsed));
+          if (ok2) {
+            applyRuntimeOverride(parsed, true);
+            window.location.href = window.location.origin + window.location.pathname; // drop hash
             return;
           }
         } else {
-          const input = prompt('Paste URL containing #config=...');
-          if (input) {
-            const u = new URL(input);
-            const parsed = readConfigFromHashString(u.hash || '');
-            if (parsed && isPlainObject(parsed)) {
-              const check2 = validateConfigObject(parsed);
-              if (!check2.valid) { setStatus('URL config invalid: ' + check2.errors.join('; '), true); return; }
-              const ok2 = confirm('Apply configuration from pasted URL?\n\n' + summarizeConfig(parsed));
-              if (ok2) {
-                applyRuntimeOverride(parsed, true);
-                window.location.href = window.location.origin + window.location.pathname; // drop hash
-                return;
-              }
-            } else {
-              setStatus('No valid config found in URL.', true);
-            }
-          }
+          setStatus('No valid config found in URL.', true);
+        }
+      }
         }
       } catch (e) {
         setStatus('Failed to load from URL.', true);
