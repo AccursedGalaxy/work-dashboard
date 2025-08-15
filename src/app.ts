@@ -4,8 +4,8 @@
   // ===== Command DSL helpers =====
   function normalizeSmartQuotes(s: string) {
     return String(s || '')
-      .replace(/[""]/g, '"')
-      .replace(/['']/g, "'");
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'");
   }
 
   function tokenizeCommand(input: string) {
