@@ -371,11 +371,8 @@
       
       items.sort((a, b) => (b.__score || 0) - (a.__score || 0));
       
-      // Strip internal score before returning and cap to top 3
-      return items.slice(0, 3).map((it) => {
-        delete it.__score;
-        return it;
-      });
+      // Cap to top 3; keep __score for downstream ranking (strip at render time if needed)
+      return items.slice(0, 3);
     } catch (_) {
       return [];
     }
