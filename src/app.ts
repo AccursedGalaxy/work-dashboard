@@ -956,7 +956,7 @@
       // If the typed text resolves as a command, include it explicitly as a first-class suggestion
       let typedCommandScored: any[] = [];
       if (q) {
-        const parsedTyped = parseCommandDsl(q, cfg);
+        const parsedTyped = parseCommandDsl(q, config);
         if (parsedTyped && parsedTyped.targets && parsedTyped.targets.length) {
           const first = parsedTyped.targets[0];
           const typedItem = {
@@ -977,23 +977,37 @@
       }
 
       // Get smart command suggestions and score them
-      const learned = q ? getLearnedCommandSuggestions(q, cfg) : [];
+      const learned = q ? getLearnedCommandSuggestions(q, config) : [];
       const scoredLearned = learned.map(function (it) {
-        // Smart suggestions get their internal score, but we cap it to ensure user input takes priority
+        // Smart suggestions get their internal score, but we need to balance with user input
         const smartScore = it.__score || 0;
-        // Cap smart suggestion scores so they don't override strong user input matches
-        const cappedScore = Math.min(smartScore, 15);
-        return { item: it, score: cappedScore, type: 'smart' };
+        
+        // For smart suggestions, give additional boost if they strongly match what user typed
+        const itemText = (it.searchText || it.label || '').toLowerCase();
+        const queryLower = q.toLowerCase();
+        
+        // Strong relevance boost for smart suggestions that closely match user input
+        let relevanceBoost = 0;
+        if (itemText.includes(queryLower)) {
+          // If the smart suggestion contains the query, it's very relevant
+          relevanceBoost = itemText.startsWith(queryLower) ? 15 : 10;
+        }
+        
+        // Cap base smart score at 15, but allow relevance boost to make it competitive
+        const cappedBaseScore = Math.min(smartScore, 15);
+        const finalScore = cappedBaseScore + relevanceBoost;
+        
+        return { item: it, score: finalScore, type: 'smart' };
       });
 
       // Dynamic go/ search suggestion
       let suggestion: any = null;
-      if (q && cfg.go && cfg.go.fallbackSearchUrl) {
+      if (q && config.go && config.go.fallbackSearchUrl) {
         suggestion = {
           id: 'go-search:' + q,
           label: 'Search go/: ' + q,
           icon: '🔎',
-          url: cfg.go.fallbackSearchUrl + encodeURIComponent(q),
+          url: config.go.fallbackSearchUrl + encodeURIComponent(q),
           type: 'go-search',
           searchText: 'go ' + q
         };
@@ -1078,7 +1092,7 @@
       
       // Handle command execution even without analytics
       if (it && it.type === 'cmd' && it.__cmd) {
-        runCommandTargets(it.__cmd, false, cfg);
+        runCommandTargets(it.__cmd, false, config);
         close();
         return;
       }
@@ -1090,16 +1104,16 @@
     const debouncedRender = debounce(function () { renderResults(index, input.value); }, 120);
     input.addEventListener('input', debouncedRender as any);
     input.addEventListener('keydown', function (e) {
-      if (matchesKey(e as any, cfg.keybinds.quickLauncherClose)) { e.preventDefault(); close(); return; }
-      if (matchesKey(e as any, cfg.keybinds.quickLauncherNext)) { e.preventDefault(); move(1); return; }
-      if (matchesKey(e as any, cfg.keybinds.quickLauncherPrev)) { e.preventDefault(); move(-1); return; }
-      if (matchesKey(e as any, cfg.keybinds.quickLauncherOpenInTab)) { 
+      if (matchesKey(e as any, config.keybinds.quickLauncherClose)) { e.preventDefault(); close(); return; }
+      if (matchesKey(e as any, config.keybinds.quickLauncherNext)) { e.preventDefault(); move(1); return; }
+      if (matchesKey(e as any, config.keybinds.quickLauncherPrev)) { e.preventDefault(); move(-1); return; }
+      if (matchesKey(e as any, config.keybinds.quickLauncherOpenInTab)) { 
         e.preventDefault(); 
         const sel = currentResults[selectedIndex];
         if (sel) {
           // Handle command execution with shift key (open all targets)
           if (sel.type === 'cmd' && sel.__cmd) {
-            runCommandTargets(sel.__cmd, !!e.shiftKey, cfg);
+            runCommandTargets(sel.__cmd, !!e.shiftKey, config);
             close();
             return;
           }
@@ -1112,17 +1126,17 @@
         
         // Fallback: parse and run as command if it resolves
         const q = input.value.trim();
-        const parsed = q ? parseCommandDsl(q, cfg) : { targets: [] };
+        const parsed = q ? parseCommandDsl(q, config) : { targets: [] };
         if (parsed && parsed.targets && parsed.targets.length) {
-          runCommandTargets(parsed, !!e.shiftKey, cfg);
+          runCommandTargets(parsed, !!e.shiftKey, config);
           close();
           return;
         }
         
         // Finally, try learned command suggestions based on history
-        const learned = getLearnedCommandSuggestions(q, cfg);
+        const learned = getLearnedCommandSuggestions(q, config);
         if (learned && learned.length && learned[0] && learned[0].__cmd) {
-          runCommandTargets(learned[0].__cmd, !!e.shiftKey, cfg);
+          runCommandTargets(learned[0].__cmd, !!e.shiftKey, config);
           close();
         }
       }
