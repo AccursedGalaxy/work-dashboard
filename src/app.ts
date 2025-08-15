@@ -140,7 +140,8 @@
         for (const expansion of expansions) {
           let expanded = expansion;
           for (const varName of Object.keys(result.vars)) {
-            expanded = expanded.replace(new RegExp(`\\{${varName}\\}`, 'g'), result.vars[varName]);
+            const safeName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            expanded = expanded.replace(new RegExp('\\{' + safeName + '\\}', 'g'), result.vars[varName]);
           }
           const subTargets = parseCommandSegment(expanded, cfg);
           targets.push(...subTargets);
