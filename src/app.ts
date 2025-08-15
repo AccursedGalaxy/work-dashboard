@@ -119,7 +119,8 @@
         for (const varName of Object.keys(result.vars)) {
           const val = result.vars[varName];
           if (varName === 'urlencode') continue; // special function
-          url = url.replace(new RegExp(`\\{${varName}\\}`, 'g'), val);
+          const safeName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          url = url.replace(new RegExp('\\{' + safeName + '\\}', 'g'), val);
         }
         // Handle urlencode function
         url = url.replace(/\{urlencode\(([^)]+)\)\}/g, (_, expr) => {
