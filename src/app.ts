@@ -1026,6 +1026,15 @@
         deduped.push(r);
       }
 
+      // Ensure typed command (if present) is first
+      if (q && typedCommandScored && typedCommandScored.length) {
+        const typedIdx = deduped.findIndex(function (r) { return r && r.type === 'cmd-typed'; });
+        if (typedIdx > 0) {
+          const typed = deduped.splice(typedIdx, 1)[0];
+          deduped.unshift(typed);
+        }
+      }
+ 
       // Build final results list with top scored items
       currentResults = deduped.slice(0, 50).map(function (r) { return r.item; });
       if (suggestion) currentResults.push(suggestion);

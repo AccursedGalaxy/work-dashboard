@@ -4,8 +4,8 @@
     // ===== Command DSL helpers =====
     function normalizeSmartQuotes(s) {
         return String(s || '')
-            .replace(/[""]/g, '"')
-            .replace(/['']/g, "'");
+            .replace(/[“”]/g, '"')
+            .replace(/[‘’]/g, "'");
     }
     function tokenizeCommand(input) {
         const text = normalizeSmartQuotes(input);
@@ -119,7 +119,8 @@
                     const val = result.vars[varName];
                     if (varName === 'urlencode')
                         continue; // special function
-                    url = url.replace(new RegExp(`\\{${varName}\\}`, 'g'), val);
+                    const safeName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    url = url.replace(new RegExp('\\{' + safeName + '\\}', 'g'), val);
                 }
                 // Handle urlencode function
                 url = url.replace(/\{urlencode\(([^)]+)\)\}/g, (_, expr) => {
@@ -138,7 +139,8 @@
                 for (const expansion of expansions) {
                     let expanded = expansion;
                     for (const varName of Object.keys(result.vars)) {
-                        expanded = expanded.replace(new RegExp(`\\{${varName}\\}`, 'g'), result.vars[varName]);
+                        const safeName = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        expanded = expanded.replace(new RegExp('\\{' + safeName + '\\}', 'g'), result.vars[varName]);
                     }
                     const subTargets = parseCommandSegment(expanded, cfg);
                     targets.push(...subTargets);
@@ -357,7 +359,7 @@
                 });
             });
             items.sort((a, b) => (b.__score || 0) - (a.__score || 0));
-            // Strip internal score before returning and cap to top 3
+            // Cap to top 3; keep __score for downstream ranking (strip at render time if needed)
             return items.slice(0, 3);
         }
         catch (_) {
@@ -458,7 +460,33 @@
                         { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
                     ]
                 }
-            ]
+            ],
+            commandDsl: {
+                templates: {
+                    'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
+                    'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
+                    'gh code {q}': 'https://github.com/search?q={urlencode(q)}&type=code',
+                    'gh {owner}/{repo}': 'https://github.com/{owner}/{repo}',
+                    'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
+                    'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
+                    'yt {q}': 'https://www.youtube.com/results?search_query={urlencode(q)}',
+                    'aur {q}': 'https://aur.archlinux.org/packages?K={urlencode(q)}',
+                    'wiki {q}': 'https://en.wikipedia.org/w/index.php?search={urlencode(q)}',
+                    'r/{sub}': 'https://www.reddit.com/r/{sub}/',
+                    'npm {pkg}': 'https://www.npmjs.com/package/{pkg}',
+                    'unpkg {pkg}': 'https://unpkg.com/browse/{pkg}/',
+                    'bp {pkg}': 'https://bundlephobia.com/package/{pkg}',
+                    'go {key}': ''
+                },
+                macros: {
+                    'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}']
+                },
+                defaults: {
+                    defaultRepo: '',
+                    defaultTrackerPrefix: '',
+                    trackerUrl: ''
+                }
+            }
         }, defaultConfig, fileConfig, userConfig);
         initTheme(config.theme);
         backgroundCycler = createBackgroundCycler(config.backgrounds);
@@ -994,9 +1022,16 @@
                 seen.add(key);
                 deduped.push(r);
             }
+            // Ensure typed command (if present) is first
+            if (q && typedCommandScored && typedCommandScored.length) {
+                const typedIdx = deduped.findIndex(function (r) { return r && r.type === 'cmd-typed'; });
+                if (typedIdx > 0) {
+                    const typed = deduped.splice(typedIdx, 1)[0];
+                    deduped.unshift(typed);
+                }
+            }
             // Build final results list with top scored items
             currentResults = deduped.slice(0, 50).map(function (r) { return r.item; });
-            // Add dynamic go-search suggestion if available
             if (suggestion)
                 currentResults.push(suggestion);
             selectedIndex = 0;
@@ -1038,7 +1073,6 @@
                     key = 'go:' + it.label;
                 }
                 else if (it && it.type === 'cmd' && typeof it.id === 'string') {
-                    // Normalize to 'cmd:...' analytics key derived from the item's id
                     key = it.id.replace(/^cmd:/, 'cmd:');
                 }
                 else {
