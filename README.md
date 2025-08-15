@@ -1,7 +1,8 @@
-#
-## Work Dashboard
+# Work Dashboard
 
 ![Preview](./preview.png)
+
+## What it does
 
 Minimal, fast, and elegant personal start page for work. It gives you:
 
@@ -24,6 +25,25 @@ Minimal, fast, and elegant personal start page for work. It gives you:
 - **Privacy-friendly analytics (optional)**: Local-only counts in `localStorage` to improve Quick Launcher ranking.
 
 ---
+
+## Screenshots
+
+![Dashboard preview](./preview.png)
+
+## Architecture
+
+```mermaid
+flowchart TD
+  A[index.html] --> B[app.js]
+  B --> C[config-loader.js]
+  C --> D[(config.json / config.yaml / config.js / config.example.js)]
+  B --> E[UI: Links grid, Search forms, Quick Launcher, Keyboard shortcuts]
+  B --> F[Mini Browser iframe]
+  B --> G[Service Worker: sw.js]
+  B --> H[Wallpapers cycler]
+  F --> I[(External sites)]
+  G --> J[(Cache: app shell & assets)]
+```
 
 ## How it works
 
@@ -48,6 +68,16 @@ Security-conscious defaults:
 - Strong `referrerpolicy` and `rel` attributes on external links.
 
 ---
+
+## Getting started in 5 commands
+
+```bash
+git clone https://github.com/yourusername/work-dashboard.git
+cd work-dashboard
+npm install
+npm run build
+python3 -m http.server 8000
+```
 
 ## Quick start
 

@@ -461,33 +461,7 @@
                         { label: 'Company Wiki', url: 'https://wiki.example.com', icon: '📚' }
                     ]
                 }
-            ],
-            commandDsl: {
-                templates: {
-                    'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
-                    'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
-                    'gh code {q}': 'https://github.com/search?q={urlencode(q)}&type=code',
-                    'gh {owner}/{repo}': 'https://github.com/{owner}/{repo}',
-                    'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
-                    'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
-                    'yt {q}': 'https://www.youtube.com/results?search_query={urlencode(q)}',
-                    'aur {q}': 'https://aur.archlinux.org/packages?K={urlencode(q)}',
-                    'wiki {q}': 'https://en.wikipedia.org/w/index.php?search={urlencode(q)}',
-                    'r/{sub}': 'https://www.reddit.com/r/{sub}/',
-                    'npm {pkg}': 'https://www.npmjs.com/package/{pkg}',
-                    'unpkg {pkg}': 'https://unpkg.com/browse/{pkg}/',
-                    'bp {pkg}': 'https://bundlephobia.com/package/{pkg}',
-                    'go {key}': ''
-                },
-                macros: {
-                    'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}']
-                },
-                defaults: {
-                    defaultRepo: '',
-                    defaultTrackerPrefix: '',
-                    trackerUrl: ''
-                }
-            }
+            ]
         }, defaultConfig, fileConfig, userConfig);
         initTheme(config.theme);
         backgroundCycler = createBackgroundCycler(config.backgrounds);
@@ -998,6 +972,10 @@
                 const finalScore = cappedBaseScore + relevanceBoost;
                 return { item: it, score: finalScore, type: 'smart' };
             });
+            const scored = q ? items.map(function (it) {
+                return { item: it, score: fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it) };
+            }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
+            scored.sort(function (a, b) { return b.score - a.score; });
             // Dynamic go/ search suggestion
             let suggestion = null;
             if (q && config.go && config.go.fallbackSearchUrl) {
@@ -1025,6 +1003,8 @@
             }
             // Build final results list with top scored items
             currentResults = deduped.slice(0, 50).map(function (r) { return r.item; });
+            // Show regular results first; put dynamic go-search suggestion after them
+            currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
             if (suggestion)
                 currentResults.push(suggestion);
             selectedIndex = 0;
@@ -1064,9 +1044,6 @@
                 }
                 else if (it && it.type === 'go') {
                     key = 'go:' + it.label;
-                }
-                else if (it && it.type === 'cmd' && typeof it.id === 'string') {
-                    key = it.id.replace(/^cmd:/, 'cmd:');
                 }
                 else {
                     key = 'link:' + it.label;
@@ -1161,6 +1138,10 @@
                     runCommandTargets(learned[0].__cmd, !!e.shiftKey, config);
                     close();
                 }
+            if (e.key === 'Enter' || matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) {
+                e.preventDefault();
+                if (currentResults[selectedIndex])
+                    openItem(currentResults[selectedIndex]);
             }
         });
         overlay.addEventListener('click', function (e) { if (e.target === overlay)
