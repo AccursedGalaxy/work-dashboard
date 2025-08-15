@@ -972,10 +972,6 @@
                 const finalScore = cappedBaseScore + relevanceBoost;
                 return { item: it, score: finalScore, type: 'smart' };
             });
-            const scored = q ? items.map(function (it) {
-                return { item: it, score: fuzzyScore(q, it.searchText) + popularityBoost(it) + prefixBoost(q, it) };
-            }).filter(function (r) { return r.score > 0; }) : items.map(function (it) { return { item: it, score: popularityBoost(it) }; });
-            scored.sort(function (a, b) { return b.score - a.score; });
             // Dynamic go/ search suggestion
             let suggestion = null;
             if (q && config.go && config.go.fallbackSearchUrl) {
@@ -1003,8 +999,7 @@
             }
             // Build final results list with top scored items
             currentResults = deduped.slice(0, 50).map(function (r) { return r.item; });
-            // Show regular results first; put dynamic go-search suggestion after them
-            currentResults = scored.slice(0, 50).map(function (r) { return r.item; });
+            // Add dynamic go-search suggestion if available
             if (suggestion)
                 currentResults.push(suggestion);
             selectedIndex = 0;
@@ -1138,10 +1133,6 @@
                     runCommandTargets(learned[0].__cmd, !!e.shiftKey, config);
                     close();
                 }
-            if (e.key === 'Enter' || matchesKey(e, cfg.keybinds.quickLauncherOpenInTab)) {
-                e.preventDefault();
-                if (currentResults[selectedIndex])
-                    openItem(currentResults[selectedIndex]);
             }
         });
         overlay.addEventListener('click', function (e) { if (e.target === overlay)
