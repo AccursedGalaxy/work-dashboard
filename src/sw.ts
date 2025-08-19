@@ -5,7 +5,7 @@ const APP_SHELL = [
   '/index.html',
   '/styles.css',
   '/app.js',
-  '/config.example.js',
+  '/config/example.js',
   '/config-loader.js',
   '/manifest.webmanifest'
 ];

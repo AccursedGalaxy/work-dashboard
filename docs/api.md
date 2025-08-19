@@ -16,7 +16,7 @@ last_updated: 2025-08-19
 
 ## Technical Details
 - Public globals:
-  - `window.DASHBOARD_DEFAULT_CONFIG` (from `config.example.js`)
+  - `window.DASHBOARD_DEFAULT_CONFIG` (from `config/example.js`)
   - `window.__openQuickLauncher()` and `window.__closeQuickLauncher()` are created by `src/app.ts`
 - Forms:
   - `#googleForm`: builds URL from `config.google` and opens in mini browser or new tab
@@ -31,4 +31,4 @@ last_updated: 2025-08-19
 | Unable to call Quick Launcher | Global not yet initialized | Call after `load` or wrap in `setTimeout` |
 
 ## References
-- `src/app.ts` lines 1201–1204 (globals), 735–815 (forms) 
+- `src/app.ts` lines 1201–1204 (globals), 735–815 (forms)

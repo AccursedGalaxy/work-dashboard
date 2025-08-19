@@ -10,7 +10,7 @@ The service worker (`sw.js`, built from `src/sw.ts`) provides offline caching fo
   - `/index.html`
   - `/styles.css`
   - `/app.js`
-  - `/config.example.js`
+  - `/config/example.js`
   - `/config-loader.js`
   - `/manifest.webmanifest`
 
