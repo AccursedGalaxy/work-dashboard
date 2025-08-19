@@ -1,8 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Root build artifacts copied by postbuild
+app.js
+app.js.map
+sw.js
+sw.js.map
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Local configuration (user-specific)
 config.js
 config.json
 config.yaml
 config.yml
+
+# Editor/OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-node_modules/
-dist/
+
+# Caches and temp
+.cache/
+.tmp/
+temp/
+tmp/
+
+# Environment files
+.env
+.env.*.local
