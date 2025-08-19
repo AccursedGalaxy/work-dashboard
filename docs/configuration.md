@@ -67,6 +67,15 @@ export interface DashboardConfig {
       icon?: string; // emoji or text
     }>;
   }>;
+  commandDsl?: {
+    templates?: Record<string, string>;
+    macros?: Record<string, string[]>;
+    defaults?: {
+      defaultRepo?: string;
+      defaultTrackerPrefix?: string;
+      trackerUrl?: string; // e.g. https://tracker.example.com/browse/{id}
+    };
+  };
 }
 ```
 
@@ -102,6 +111,23 @@ export interface DashboardConfig {
     dark: []
   },
   sections: [ /* sample cards and links shown in the app */ ]
+  ,
+  commandDsl: {
+    templates: {
+      'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
+      'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
+      'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
+      'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
+      'r/{sub}': 'https://www.reddit.com/r/{sub}/',
+      'go {key}': ''
+    },
+    macros: { 'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}'] },
+    defaults: {
+      defaultRepo: 'your-org/your-repo',
+      defaultTrackerPrefix: 'ABC-',
+      trackerUrl: 'https://your-tracker.example.com/browse/{id}'
+    }
+  }
 }
 ```
 
@@ -216,3 +242,40 @@ window.DASHBOARD_CONFIG = {
 ```js
 window.DASHBOARD_CONFIG = { analytics: { enableLocal: true } };
 ```
+
+## Command DSL
+
+Add parameterized navigation commands and macros to the Quick Launcher.
+
+- templates: Map a command pattern to a URL. Tokens in `{name}` capture typed values.
+  - Transform function: `urlencode(name)` URL-encodes the captured value.
+- macros: Expand one command into several sub-commands (each resolved via `templates`).
+- defaults: Quality-of-life shortcuts and reserved prefixes.
+
+```json
+{
+  "commandDsl": {
+    "templates": {
+      "gh {owner}/{repo} i {num}": "https://github.com/{owner}/{repo}/issues/{num}",
+      "gh {owner}/{repo} pr {num}": "https://github.com/{owner}/{repo}/pull/{num}",
+      "mdn {q}": "https://developer.mozilla.org/en-US/search?q={urlencode(q)}",
+      "so {q}": "https://stackoverflow.com/search?q={urlencode(q)}",
+      "r/{sub}": "https://www.reddit.com/r/{sub}/",
+      "go {key}": ""
+    },
+    "macros": { "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"] },
+    "defaults": {
+      "defaultRepo": "your-org/your-repo",
+      "defaultTrackerPrefix": "ABC-",
+      "trackerUrl": "https://your-tracker.example.com/browse/{id}"
+    }
+  }
+}
+```
+
+Behavior:
+
+- `go {key}` uses the regular `go` resolver
+- `pr 42` expands to `gh {defaultRepo} pr 42`
+- Pipes split a command into multiple targets: `mdn fetch | so "js fetch"`
+- Enter opens the first target; Shift+Enter opens all targets

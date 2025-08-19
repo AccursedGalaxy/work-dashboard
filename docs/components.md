@@ -26,6 +26,23 @@ window.__openQuickLauncher?.();
 window.__closeQuickLauncher?.();
 ```
 
+## Command DSL
+
+- Integrated with the Quick Launcher: type commands to open parameterized URLs or expand macros
+- Reads templates, macros, and defaults from your `commandDsl` configuration
+- Supports multi-target pipes and shift-execution
+
+Details:
+
+- Templates: Commands like `gh {owner}/{repo} i {num}` resolve to URLs; variables are taken from what you type
+- Macros: One command expands into many (e.g., `pkg {pkg}` → npm, unpkg, bundlephobia)
+- `go` alias: `go KEY` uses the `go` resolver to open mapped intranet shortcuts
+- Shorthand: `pr 42` opens a PR in your `commandDsl.defaults.defaultRepo`
+- Pipes: `mdn fetch | so "js fetch"` — Enter opens the first target; Shift+Enter opens all targets
+- Focus timer: `time 25` starts a 25‑minute focus timer
+
+See: `docs/usage-command-dsl.md` and `docs/configuration.md` → `commandDsl`.
+
 ## Mini Browser
 
 - Container: `#mini-browser`
@@ -79,3 +96,4 @@ Tip: Set an initial page with `miniBrowser.defaultUrl`.
 - Button: `#pwa-install`
 - Appears when the browser fires `beforeinstallprompt`
 - Hidden after the choice is made
+

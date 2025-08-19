@@ -9,6 +9,7 @@ The Work Dashboard is a minimal, fast, personal start page. This documentation c
 
 - [Configuration reference](./configuration.md)
 - [Components guide](./components.md)
+- [Command DSL usage](./usage-command-dsl.md)
 - [JavaScript API](./js-api.md)
 - [Service worker](./service-worker.md)
 - [Keyboard shortcuts](./keyboard-shortcuts.md)
