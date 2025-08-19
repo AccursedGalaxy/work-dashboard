@@ -12,13 +12,17 @@ function copyFile(fromRelativePath, toRelativePath) {
 		throw new Error(`Expected build output missing: ${fromRelativePath}`);
 	}
 
+	const dir = path.dirname(toPath);
+	fs.mkdirSync(dir, { recursive: true });
 	fs.copyFileSync(fromPath, toPath);
 }
 
 function copyIfExists(fromRelativePath, toRelativePath) {
 	const fromPath = path.join(projectRoot, fromRelativePath);
 	if (fs.existsSync(fromPath)) {
-		fs.copyFileSync(fromPath, path.join(projectRoot, toRelativePath));
+		const toPath = path.join(projectRoot, toRelativePath);
+		fs.mkdirSync(path.dirname(toPath), { recursive: true });
+		fs.copyFileSync(fromPath, toPath);
 	}
 }
 
@@ -31,6 +35,13 @@ function main() {
 		['dist/app.js.map', 'app.js.map'],
 		['dist/sw.js.map', 'sw.js.map'],
 	];
+	const missing = required.filter(([from]) => !fs.existsSync(path.join(projectRoot, from)));
+	if (missing.length) {
+		throw new Error(
+			'Missing required build outputs:\n' +
+			missing.map(([from]) => `- ${from}`).join('\n')
+		);
+	}
 	required.forEach(([from, to]) => copyFile(from, to));
 	optional.forEach(([from, to]) => copyIfExists(from, to));
 }
@@ -38,6 +49,6 @@ function main() {
 try {
 	main();
 } catch (err) {
-	console.error('postbuild failed:', err instanceof Error ? err.message : err);
+	console.error('postbuild failed:', err instanceof Error ? (err.stack || err.message) : err);
 	process.exit(1);
 } 
