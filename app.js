@@ -70,19 +70,38 @@
     }
     function matchPattern(pattern, inputTokens) {
         const pTokens = tokenizeCommand(pattern);
-        if (pTokens.length > inputTokens.length)
+        if (inputTokens.length < pTokens.length)
             return { ok: false };
         const vars = {};
+        let consumedTokens = 0;
         for (let j = 0; j < pTokens.length; j++) {
-            const regex = buildTokenRegexFromPatternToken(pTokens[j]);
-            const m2 = inputTokens[j].match(regex);
-            if (!m2)
-                return { ok: false };
-            const varNames2 = (pTokens[j].match(/\{([^}]+)\}/g) || []).map(x => x.slice(1, -1).trim());
-            for (let k2 = 0; k2 < varNames2.length; k2++)
-                vars[varNames2[k2]] = m2[k2 + 1];
+            const patternTok = pTokens[j];
+            const isLast = j === pTokens.length - 1;
+            const regex = buildTokenRegexFromPatternToken(patternTok);
+            if (isLast && inputTokens.length > pTokens.length) {
+                // Last placeholder can capture the rest of the input (including spaces)
+                const tail = inputTokens.slice(j).join(' ');
+                const m2 = tail.match(regex);
+                if (!m2)
+                    return { ok: false };
+                const varNames2 = (patternTok.match(/\{([^}]+)\}/g) || []).map(x => x.slice(1, -1).trim());
+                for (let k2 = 0; k2 < varNames2.length; k2++)
+                    vars[varNames2[k2]] = m2[k2 + 1];
+                consumedTokens = inputTokens.length;
+                break;
+            }
+            else {
+                const m2 = inputTokens[j].match(regex);
+                if (!m2)
+                    return { ok: false };
+                const varNames2 = (patternTok.match(/\{([^}]+)\}/g) || []).map(x => x.slice(1, -1).trim());
+                for (let k2 = 0; k2 < varNames2.length; k2++)
+                    vars[varNames2[k2]] = m2[k2 + 1];
+            }
         }
-        return { ok: true, vars: vars, usedTokens: pTokens.length };
+        if (!consumedTokens)
+            consumedTokens = pTokens.length;
+        return { ok: true, vars: vars, usedTokens: consumedTokens };
     }
     function parseCommandSegment(segment, cfg) {
         const raw = String(segment || '').trim();
