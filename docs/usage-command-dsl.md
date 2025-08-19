@@ -47,8 +47,7 @@ Notes:
   - Press Enter to open the first target
   - Press Shift+Enter to open all targets
 - **Packages macro**: `pkg react` → opens npm, unpkg, and bundlephobia
-- **Focus timer**: `time 25` → starts a 25‑minute timer
-
+- **Focus timer (built-in)**: `time 25` → starts a 25-minute focus timer
 ## Common patterns
 
 - **Shorthand commands**: `pr 42`, `ABC-123` (prefix reserved in defaults; tracker shorthand may be added in future)
