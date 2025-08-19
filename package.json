@@ -5,7 +5,7 @@
   "scripts": {
     "build": "tsc && node scripts/postbuild.js",
     "watch": "tsc -w",
-    "start": "http-server -c-1 -p 8000 ."
+    "start": "http-server -c-1 -p 8000 -a 127.0.0.1 ."
   },
   "devDependencies": {
     "typescript": "^5.9.2",

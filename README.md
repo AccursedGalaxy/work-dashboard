@@ -69,6 +69,19 @@ Security-conscious defaults:
 
 ---
 
+### Build and postbuild
+
+- **Build**: `npm run build`
+  - Compiles TypeScript from `src/` to `dist/`.
+  - Runs a postbuild step that copies key artifacts to the project root for hosting:
+    - `dist/app.js` → `app.js`
+    - `dist/sw.js` → `sw.js`
+    - Source maps are copied if present.
+  - If any required outputs are missing, the script exits with a list of missing files.
+- **Local dev caching**: the `start` script uses `http-server -c-1` to disable caching so you always see fresh assets. If you are testing service worker updates, consider clearing site data in your browser devtools between changes.
+
+---
+
 ## Getting started in 5 commands
 
 ```bash
@@ -76,7 +89,7 @@ git clone https://github.com/yourusername/work-dashboard.git
 cd work-dashboard
 npm install
 npm run build
-python3 -m http.server 8000
+npm run start
 ```
 
 ## Quick start
@@ -90,12 +103,18 @@ python3 -m http.server 8000
     - JS: `window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };`
 3. Open it:
   - Easiest: open `index.html` directly in your browser
-  - Recommended: serve locally for a proper origin (helps with CSP, caching, and PWA)
-    - `python3 -m http.server 8000` → visit `http://localhost:8000`
+  - Recommended: `npm run start` → visit `http://localhost:8000` (localhost-only; not accessible over LAN)
 
 > Note: `config.js` is git-ignored so your work-specific links remain private.
 
 > Tip: Only override what you need; unspecified fields fall back to defaults.
+
+---
+
+### Local-only access
+
+- The dev server binds to `127.0.0.1` and is only reachable from the local machine.
+- To change the port, edit the `start` script in `package.json` or run `npx http-server -p 3000 -c-1 -a 127.0.0.1 .`.
 
 ---
 
