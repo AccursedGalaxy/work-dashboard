@@ -3,10 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "tsc && cp dist/app.js app.js && cp dist/sw.js sw.js",
-    "watch": "tsc -w"
+    "build": "tsc && node scripts/postbuild.js",
+    "watch": "tsc -w",
+    "start": "http-server -c-1 -p 8000 ."
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "http-server": "^14.1.1"
   }
 }
