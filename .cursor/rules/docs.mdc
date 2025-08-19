@@ -1,0 +1,160 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Operating Mode
+
+- **Scope:** Only edit or create files under `docs/` (plus doc-site configs like `mkdocs.yml` or Docusaurus sidebar if detected). Do not refactor app code unless explicitly required to verify information.
+- **Style:** Write **Plain-English first**, then add **Technical Details** for power users. Prefer lists, tables, and short sentences.
+- **Verification:** Do not invent facts. **Verify from code** (configs, scripts, routers, env, comments). If unknown, add a TODO with file/line references to `docs/TODOs.md`.
+- **Navigation:** Generate a cohesive ToC and cross-link pages. If a static site generator is detected (MkDocs/Docusaurus), configure nav automatically.
+- **Dates:** Use the current local date for `last_updated` fields in frontmatter.
+
+---
+
+## Step 1 — Inventory & Plan
+
+- Scan the **entire repository** to identify:
+  - Tech stack(s), runtime(s), entrypoints, scripts, services, ports.
+  - Configuration files and **all environment variables**.
+  - Data storage locations and formats.
+  - API routes/handlers and CLI commands.
+  - Build and run workflows (local only is the focus).
+- Produce `docs/_toc.md` with a proposed Table of Contents (human-readable).
+- Create or update `docs/index.md` pointing to all pages.
+
+---
+
+## Step 2 — Author or Revise Docs (Section by Section)
+
+Create/update the following files under `docs/`:
+
+- `index.md` — Overview, features, repo map, links to sections.
+- `getting-started.md` — 10-minute quickstart (copy/paste commands), prerequisites (OS, runtimes, package managers), first run, verification steps.
+- `installation.md` — Detailed install per OS (Windows/macOS/Linux), version constraints, optional GPU notes if relevant.
+- `configuration.md` — **Complete env/config reference** with table: Key | Type | Default | Required | Description | Where used. Sync `.env.example`.
+- `running-the-app.md` — Run, stop, ports, hot reload, logs, dev vs. prod builds (if applicable).
+- `architecture.md` — Component + request/data-flow diagrams (Mermaid) and explanations of modules and their interactions.
+- `api.md` — All routes/handlers (method, path, params, req/resp examples, error codes), verified from router/controllers.
+- `cli.md` (if applicable) — Commands, flags, examples, exit codes, sample outputs.
+- `data-and-storage.md` — Local data paths, schemas, seed/migrate steps, backup/restore, retention; note if **no remote collection**.
+- `testing.md` — How to run tests, structure, adding new tests, coverage thresholds.
+- `troubleshooting.md` — Real-world errors and fixes (e.g., port in use, Node/Python mismatch, missing env, CORS).
+- `faq.md` — Short Q&A for common user questions.
+- `security-and-privacy.md` — Secrets handling, local-only assumptions, least-privilege tips.
+- `release-notes.md` — Start or update a changelog outline.
+- `_toc.md` — Final navigable ToC after all pages are created.
+- `TODOs.md` — Open questions with **file/line references** and proposed next steps.
+
+If MkDocs or Docusaurus is present:
+- Add/update `mkdocs.yml` or `docusaurus.config.*` and sidebars to include all pages in a clear nav structure.
+
+---
+
+## Page Template (Use for Every Doc Page)
+
+Use this exact template structure for consistency:
+
+```md
+---
+title: <Human Title>
+description: <1–2 sentence summary>
+last_updated: <YYYY-MM-DD>
+---
+
+# <Title>
+
+## TL;DR (Plain English)
+- What this is
+- Why it matters
+- 3–6 short steps to succeed
+
+## Step-by-step
+1. …
+2. …
+
+## Technical Details
+- Exact commands, scripts, and file paths
+- Code-verified facts and version constraints
+- Relevant code snippets with file references
+
+## Common Pitfalls
+- Symptom → Cause → Fix
+
+## Troubleshooting
+| Symptom | Likely Cause | How to Fix |
+| --- | --- | --- |
+|  |  |  |
+
+## References
+- Source files: `path/to/file` lines x–y
+- Related docs: [link]
+```
+
+---
+
+## Required Tables & Examples
+
+**Configuration Table (in `configuration.md`):**
+
+```md
+| Key              | Type   | Default | Required | Description                         | Where used                    |
+|------------------|--------|---------|----------|-------------------------------------|-------------------------------|
+| PORT             | number | 3000    | no       | Local server port                   | `src/server.ts`               |
+| DATA_DIR         | path   | ./data  | no       | Directory for local data storage    | `src/lib/storage.ts`          |
+| FEATURE_X_ENABLE | bool   | false   | no       | Enable experimental Feature X       | `src/features/x/index.ts`     |
+```
+
+**Mermaid Diagram Stub (in `architecture.md`):**
+
+```mermaid
+flowchart LR
+  A[User Browser] --> B(Frontend App)
+  B -->|HTTP| C(API Server)
+  C --> D[(Local Storage/DB)]
+  C --> E[Services/Workers]
+```
+
+---
+
+## Verification Tasks (Perform While Writing)
+
+- Extract all **scripts** from `package.json` / `pyproject.toml` / `Cargo.toml` and document them in `running-the-app.md` and/or `cli.md`.
+- Enumerate **routes/endpoints** by reading router/controller files. Provide method, path, params, examples, and error codes in `api.md`.
+- List **ports** from configs and code.
+- Enumerate **env/config keys** and **where they are used**; sync `.env.example`.
+- Identify any **migrations/seeders**; document run/rollback steps.
+- Confirm **start/build/test commands** actually correspond to real entrypoints and scripts.
+
+---
+
+## Style & Quality Rules
+
+- Keep sentences short; prefer **bullets and tables**.
+- Show commands in fenced code blocks with **copy-paste-ready** examples.
+- Provide OS-specific steps where needed (Windows/macOS/Linux).
+- Add **Common Pitfalls** and **Troubleshooting** to pages likely to cause confusion.
+- Do **not** describe non-existent features. Create TODOs instead.
+- Cross-link related pages and link back to `index.md`.
+
+---
+
+## Workflow
+
+1. Generate `docs/_toc.md` (proposal).
+2. Create/refresh `docs/index.md`.
+3. Implement pages in the **Deliverables** order above.
+4. After each page, **re-scan code** to catch missed details.
+5. Finalize cross-links, ToC, and doc-site nav (if applicable).
+6. Output a summary of modified files and high-level diffs.
+
+---
+
+## Acceptance Criteria
+
+- A newcomer can **install, configure, and run locally** in under **10 minutes** using these docs.
+- Every config/env key is documented with **default, requirement, and usage location**.
+- All routes/commands are listed with accurate **examples**.
+- **No unverified claims**; unknowns captured in `docs/TODOs.md`.
+- Docs have a coherent ToC and cross-link structure.
