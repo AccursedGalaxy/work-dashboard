@@ -1,0 +1,21 @@
+# Table of Contents
+
+- Overview: `docs/index.md`
+- Getting Started: `docs/getting-started.md`
+- Installation: `docs/installation.md`
+- Configuration: `docs/configuration.md`
+- Running the App: `docs/running-the-app.md`
+- Architecture: `docs/architecture.md`
+- API: `docs/api.md`
+- CLI: `docs/cli.md`
+- Data & Storage: `docs/data-and-storage.md`
+- Service Worker: `docs/service-worker.md`
+- Components: `docs/components.md`
+- Keyboard Shortcuts: `docs/keyboard-shortcuts.md`
+- Local Analytics: `docs/analytics.md`
+- Examples: `docs/examples.md`
+- Testing: `docs/testing.md`
+- Troubleshooting: `docs/troubleshooting.md`
+- FAQ: `docs/faq.md`
+- Release Notes: `docs/release-notes.md`
+- TODOs: `docs/TODOs.md` 

@@ -16,6 +16,42 @@ Later sources override earlier ones. Merge strategy:
 
 Only specify the fields you need to change in `config.json` or `config.yaml`/`config.yml` (or `config.js`).
 
+## Configuration Table
+
+| Key | Type | Default | Required | Description | Where used |
+|---|---|---|---|---|---|
+| theme | 'auto'|'light'|'dark' | 'auto' | no | Initial theme preference; 'auto' follows system | `src/app.ts` lines 430–437, 557–574 |
+| google.baseUrl | string | https://www.google.com/search | no | Google search base URL | `src/app.ts` lines 431, 742–750 |
+| google.queryParam | string | q | no | Query parameter name | `src/app.ts` lines 431, 742–750 |
+| google.extraParams | object | {} | no | Extra query params appended to URL | `src/app.ts` lines 744–750 |
+| miniBrowser.enable | boolean | false | no | Hide/show mini browser UI and behavior | `src/app.ts` lines 432, 835–846 |
+| miniBrowser.defaultUrl | string | https://www.google.com/webhp?igu=1 | no | Initial URL for mini browser | `src/app.ts` lines 432, 852–856 |
+| analytics.enableLocal | boolean | false | no | Local-only counts in `localStorage` to boost ranking | `src/app.ts` lines 433, 1403–1414 |
+| keybinds.quickLauncherOpen | string | Mod+K | no | Open Quick Launcher | `src/app.ts` lines 435, 1230–1269 |
+| keybinds.toggleTheme | string | t | no | Toggle theme | `src/app.ts` lines 436, 1264–1269 |
+| keybinds.focusGoogle | string | / | no | Focus Google input | `src/app.ts` lines 437, 1253–1257 |
+| keybinds.focusGo | string | g | no | Focus go/ input | `src/app.ts` lines 438, 1259–1263 |
+| keybinds.quickLauncherClose | string | Escape | no | Close Quick Launcher | `src/app.ts` lines 439, 1235–1241 |
+| keybinds.quickLauncherNext | string | ArrowDown | no | Next result | `src/app.ts` lines 440, 1115–1121 |
+| keybinds.quickLauncherPrev | string | ArrowUp | no | Previous result | `src/app.ts` lines 441, 1116–1121 |
+| keybinds.quickLauncherOpenInTab | string | Enter | no | Open selection or run command | `src/app.ts` lines 442, 1118–1149 |
+| go.homepageUrl | string | https://go/ | no | Destination for `go/` | `src/app.ts` lines 445, 794–799 |
+| go.fallbackSearchUrl | string | '' | no | Fallback search prefix when key not found | `src/app.ts` lines 446, 820–822 |
+| go.keyToUrl | object | { PAM: 'https://go/pam' } | no | Case-insensitive mapping of go keys | `src/app.ts` lines 447–450, 825–829 |
+| backgrounds.enable | boolean | true | no | Enable background cycler | `src/app.ts` lines 451–458, 582–690 |
+| backgrounds.cycleMs | number | 15000 | no | Interval between images (ms) | `src/app.ts` lines 452–454, 632–637 |
+| backgrounds.transitionMs | number | 1200 | no | Crossfade duration (ms) | `src/app.ts` lines 454–455, 664–674 |
+| backgrounds.randomize | boolean | true | no | Shuffle background order | `src/app.ts` lines 455–456, 648–684 |
+| backgrounds.light | string[] | [] | no | Light theme images | `src/app.ts` lines 456–457, 592–599 |
+| backgrounds.dark | string[] | [] | no | Dark theme images | `src/app.ts` lines 457–458, 592–599 |
+| sections | array | sample | no | Cards and links shown on the page | `src/app.ts` lines 459–480, 692–733 |
+| commandDsl.templates | object | multiple | no | Command-to-URL patterns | `src/app.ts` lines 482–497, 114–132 |
+| commandDsl.macros | object | { 'pkg {pkg}': [...] } | no | Patterns expanding to multiple templates | `src/app.ts` lines 498–500, 134–151 |
+| commandDsl.defaults.defaultRepo | string | '' | no | Default repo for `pr NUM` shorthand | `src/app.ts` lines 501–505, 106–112 |
+| commandDsl.defaults.defaultTrackerPrefix | string | '' | no | Reserved for tracker IDs | `src/app.ts` lines 501–505 |
+| commandDsl.defaults.trackerUrl | string | '' | no | Reserved for tracker links | `src/app.ts` lines 501–505 |
+| ui.goTitle | string | (from HTML) | no | Override card title for go/ section | `src/app.ts` lines 903–915 |
+
 ## Type shape
 
 ```ts
@@ -24,58 +60,24 @@ export type Theme = 'auto' | 'light' | 'dark';
 
 export interface DashboardConfig {
   theme?: Theme;
-  google?: {
-    baseUrl?: string;          // default https://www.google.com/search
-    queryParam?: string;       // default 'q'
-    extraParams?: Record<string, string | number | boolean>; // optional extra query params — values are stringified via String(value) and added with URLSearchParams.set; booleans become "true"/"false", numbers are stringified, null/undefined are ignored, arrays are not supported (pre-join or customize to append), and repeated keys are replaced (not appended)
-  };
-  miniBrowser?: {
-    enable?: boolean;          // default false (UI hidden when false)
-    defaultUrl?: string;       // default https://www.google.com/webhp?igu=1
-  };
-  analytics?: {
-    enableLocal?: boolean;     // default false (localStorage-only popularity data)
-  };
+  google?: { baseUrl?: string; queryParam?: string; extraParams?: Record<string, string | number | boolean> };
+  miniBrowser?: { enable?: boolean; defaultUrl?: string };
+  analytics?: { enableLocal?: boolean };
   keybinds?: {
-    quickLauncherOpen?: string;       // default 'Mod+K'
-    toggleTheme?: string;             // default 't'
-    focusGoogle?: string;             // default '/'
-    focusGo?: string;                 // default 'g'
-    quickLauncherClose?: string;      // default 'Escape'
-    quickLauncherNext?: string;       // default 'ArrowDown'
-    quickLauncherPrev?: string;       // default 'ArrowUp'
-    quickLauncherOpenInTab?: string;  // default 'Enter'
+    quickLauncherOpen?: string;
+    toggleTheme?: string;
+    focusGoogle?: string;
+    focusGo?: string;
+    quickLauncherClose?: string;
+    quickLauncherNext?: string;
+    quickLauncherPrev?: string;
+    quickLauncherOpenInTab?: string;
   };
-  go?: {
-    homepageUrl?: string;             // default 'https://go/'
-    fallbackSearchUrl?: string;       // default '' (disabled)
-    keyToUrl?: Record<string, string>;// case-insensitive keys (e.g., { PAM: 'https://go/pam' })
-  };
-  backgrounds?: {
-    enable?: boolean;                 // default true
-    cycleMs?: number;                 // default 15000
-    transitionMs?: number;            // default 1200
-    randomize?: boolean;              // default true
-    light?: string[];                 // default []
-    dark?: string[];                  // default []
-  };
-  sections?: Array<{
-    title: string;
-    links: Array<{
-      label: string;
-      url: string;
-      icon?: string; // emoji or text
-    }>;
-  }>;
-  commandDsl?: {
-    templates?: Record<string, string>;
-    macros?: Record<string, string[]>;
-    defaults?: {
-      defaultRepo?: string;
-      defaultTrackerPrefix?: string;
-      trackerUrl?: string; // e.g. https://tracker.example.com/browse/{id}
-    };
-  };
+  go?: { homepageUrl?: string; fallbackSearchUrl?: string; keyToUrl?: Record<string, string> };
+  backgrounds?: { enable?: boolean; cycleMs?: number; transitionMs?: number; randomize?: boolean; light?: string[]; dark?: string[] };
+  sections?: Array<{ title: string; links: Array<{ label: string; url: string; icon?: string }> }>;
+  commandDsl?: { templates?: Record<string, string>; macros?: Record<string, string[]>; defaults?: { defaultRepo?: string; defaultTrackerPrefix?: string; trackerUrl?: string } };
+  ui?: { goTitle?: string };
 }
 ```
 
@@ -110,172 +112,32 @@ export interface DashboardConfig {
     light: [],
     dark: []
   },
-  sections: [ /* sample cards and links shown in the app */ ]
-  ,
+  sections: [ /* sample cards and links shown in the app */ ],
   commandDsl: {
     templates: {
       'gh {owner}/{repo} i {num}': 'https://github.com/{owner}/{repo}/issues/{num}',
       'gh {owner}/{repo} pr {num}': 'https://github.com/{owner}/{repo}/pull/{num}',
+      'gh code {q}': 'https://github.com/search?q={urlencode(q)}&type=code',
+      'gh {owner}/{repo}': 'https://github.com/{owner}/{repo}',
       'mdn {q}': 'https://developer.mozilla.org/en-US/search?q={urlencode(q)}',
       'so {q}': 'https://stackoverflow.com/search?q={urlencode(q)}',
+      'yt {q}': 'https://www.youtube.com/results?search_query={urlencode(q)}',
+      'aur {q}': 'https://aur.archlinux.org/packages?K={urlencode(q)}',
+      'wiki {q}': 'https://en.wikipedia.org/w/index.php?search={urlencode(q)}',
       'r/{sub}': 'https://www.reddit.com/r/{sub}/',
+      'npm {pkg}': 'https://www.npmjs.com/package/{pkg}',
+      'unpkg {pkg}': 'https://unpkg.com/browse/{pkg}/',
+      'bp {pkg}': 'https://bundlephobia.com/package/{pkg}',
       'go {key}': ''
     },
     macros: { 'pkg {pkg}': ['npm {pkg}', 'unpkg {pkg}', 'bp {pkg}'] },
-    defaults: {
-      defaultRepo: 'your-org/your-repo',
-      defaultTrackerPrefix: 'ABC-',
-      trackerUrl: 'https://your-tracker.example.com/browse/{id}'
-    }
-  }
+    defaults: { defaultRepo: '', defaultTrackerPrefix: '', trackerUrl: '' }
+  },
+  ui: {}
 }
 ```
 
 Note: [`config.example.js`](../config.example.js) provides a documented baseline you can copy into `config.js`. The repository does not include `config.js`; create it by copying the example. Unspecified fields fall back to the built-in values above.
 
-## Keybinds syntax
-
-Key strings are parsed with support for modifiers:
-- Tokens: `Mod` (Ctrl on Windows/Linux, Cmd on macOS), `Ctrl`/`Control`, `Cmd`/`Meta`, `Shift`, `Alt`/`Option`
-- Non-modifier key names: `'Enter'`, `'Escape'`, `'ArrowDown'`, `'ArrowUp'`, letters and digits
-- Single-character keys are normalized to lowercase
-
-Examples:
-- `'Mod+K'`
-- `'/'`
-- `'Shift+Alt+P'`
-
-## Backgrounds
-
-- Provide image URLs or paths relative to the site root
-- When `enable` is true, the app creates a `#bg` container and crossfades between images
-- Honors `prefers-reduced-motion: reduce` by disabling auto-cycling
-- CSS variable `--bg-transition-ms` controls the crossfade duration
-
-```js
-window.DASHBOARD_CONFIG = {
-  backgrounds: {
-    enable: true,
-    cycleMs: 20000,
-    transitionMs: 800,
-    light: ['wallpapers/light/1.jpg', 'wallpapers/light/2.jpg'],
-    dark: ['wallpapers/dark/1.jpg', 'wallpapers/dark/2.jpg']
-  }
-};
-```
-
-## Google search
-
-```js
-window.DASHBOARD_CONFIG = {
-  google: {
-    baseUrl: 'https://www.google.com/search',
-    queryParam: 'q',
-    // Optional: append extra params
-    extraParams: { igu: 1 }
-  }
-};
-```
-
-## go/ launcher
-
-- `homepageUrl`: opened for `go/` or `go`
-- `fallbackSearchUrl`: when a key is not found, open this URL + encoded query
-- `keyToUrl`: case-insensitive mapping of keys to URLs
-
-```js
-window.DASHBOARD_CONFIG = {
-  go: {
-    homepageUrl: 'https://go/',
-    fallbackSearchUrl: 'https://go/',
-    keyToUrl: {
-      PAM: 'https://go/pam',
-      HR: 'https://go/hr'
-    }
-  }
-};
-```
-
-## Sections (cards and links)
-
-```js
-window.DASHBOARD_CONFIG = {
-  sections: [
-    {
-      title: 'Daily',
-      links: [
-        { label: 'Tickets', url: 'https://tickets.example.com', icon: '🎫' },
-        { label: 'Mail', url: 'https://outlook.office.com/mail', icon: '📧' }
-      ]
-    },
-    {
-      title: 'Engineering',
-      links: [
-        { label: 'Docs', url: 'https://wiki.example.com', icon: '📚' }
-      ]
-    }
-  ]
-};
-```
-
-## Mini browser
-
-- When `miniBrowser.enable` is `false`, the mini browser UI is hidden and embedding is disabled
-- When enabled, the URL bar uses Enter to open in either the embedded iframe or a new tab depending on the target selector
-
-```js
-window.DASHBOARD_CONFIG = {
-  miniBrowser: {
-    enable: true,
-    defaultUrl: 'https://example.com'
-  }
-};
-```
-
-## Analytics (local only)
-
-- Enable by setting `analytics.enableLocal = true`
-- Popular items in the Quick Launcher get a small score boost
-- Stored under `localStorage['analytics:counts']` as a JSON map
-- Keys used: `link:LABEL`, `go:KEY`, `go-search:QUERY`, `search:google`
-
-```js
-window.DASHBOARD_CONFIG = { analytics: { enableLocal: true } };
-```
-
-## Command DSL
-
-Add parameterized navigation commands and macros to the Quick Launcher.
-
-- templates: Map a command pattern to a URL. Tokens in `{name}` capture typed values.
-  - Transform function: `urlencode(name)` URL-encodes the captured value.
-- macros: Expand one command into several sub-commands (each resolved via `templates`).
-- defaults: Quality-of-life shortcuts and reserved prefixes.
-
-```json
-{
-  "commandDsl": {
-    "templates": {
-      "gh {owner}/{repo} i {num}": "https://github.com/{owner}/{repo}/issues/{num}",
-      "gh {owner}/{repo} pr {num}": "https://github.com/{owner}/{repo}/pull/{num}",
-      "mdn {q}": "https://developer.mozilla.org/en-US/search?q={urlencode(q)}",
-      "so {q}": "https://stackoverflow.com/search?q={urlencode(q)}",
-      "r/{sub}": "https://www.reddit.com/r/{sub}/",
-      "go {key}": ""
-    },
-    "macros": { "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"] },
-    "defaults": {
-      "defaultRepo": "your-org/your-repo",
-      "defaultTrackerPrefix": "ABC-",
-      "trackerUrl": "https://your-tracker.example.com/browse/{id}"
-    }
-  }
-}
-```
-
-Behavior:
-
-- `go {key}` uses the regular `go` resolver
-- `pr 42` expands to `gh {defaultRepo} pr 42`
-- Pipes split a command into multiple targets: `mdn fetch | so "js fetch"`
-- Enter opens the first target; Shift+Enter opens all targets
+## Examples
+- See `docs/examples.md` for ready-to-copy snippets
