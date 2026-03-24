@@ -3,7 +3,7 @@
 The Work Dashboard is a minimal, fast, personal start page. This documentation covers all public integration points: configuration options, UI components, global APIs, keyboard shortcuts, and the service worker.
 
 - See the project overview in `README.md` at the repository root
-- Default configuration reference lives in `config.example.js`; you can use `config.json`/`config.yaml` or `config.js` to override
+- Default configuration reference lives in `config/example.js`; you can use `config.json`/`config.yaml` or `config.js` to override
 
 ## Contents
 

@@ -1,0 +1,75 @@
+{
+	"theme": "auto",
+	"keybinds": {
+		"quickLauncherOpen": "Mod+K"
+	},
+	"miniBrowser": {
+		"enable": false,
+		"defaultUrl": "https://www.google.com/webhp?igu=1"
+	},
+	"google": {
+		"baseUrl": "https://www.google.com/search",
+		"queryParam": "q",
+		"extraParams": { "igu": 1 }
+	},
+	"go": {
+		"homepageUrl": "https://go/",
+		"fallbackSearchUrl": "https://go/"
+	},
+	"backgrounds": {
+		"enable": true,
+		"cycleMs": 15000,
+		"transitionMs": 1200,
+		"randomize": true,
+		"light": [
+			"wallpapers/light/light1.jpg",
+			"wallpapers/light/light2.jpg"
+		],
+		"dark": [
+			"wallpapers/dark/dark1.jpg",
+			"wallpapers/dark/dark2.jpg",
+			"wallpapers/dark/dark3.jpg",
+			"wallpapers/dark/dark4.png"
+		]
+	},
+	"sections": [
+		{
+			"title": "Daily",
+			"links": [
+				{ "label": "Tickets", "url": "https://tickets.example.com", "icon": "🎫" },
+				{ "label": "Mail", "url": "https://outlook.office.com/mail", "icon": "📧" }
+			]
+		},
+		{
+			"title": "Engineering",
+			"links": [
+				{ "label": "Docs", "url": "https://wiki.example.com", "icon": "📚" }
+			]
+		}
+	],
+	"commandDsl": {
+		"templates": {
+			"gh {owner}/{repo} i {num}": "https://github.com/{owner}/{repo}/issues/{num}",
+			"gh {owner}/{repo} pr {num}": "https://github.com/{owner}/{repo}/pull/{num}",
+			"gh code {q}": "https://github.com/search?q={urlencode(q)}&type=code",
+			"gh {owner}/{repo}": "https://github.com/{owner}/{repo}",
+			"mdn {q}": "https://developer.mozilla.org/en-US/search?q={urlencode(q)}",
+			"so {q}": "https://stackoverflow.com/search?q={urlencode(q)}",
+			"yt {q}": "https://www.youtube.com/results?search_query={urlencode(q)}",
+			"aur {q}": "https://aur.archlinux.org/packages?K={urlencode(q)}",
+			"wiki {q}": "https://en.wikipedia.org/w/index.php?search={urlencode(q)}",
+			"r/{sub}": "https://www.reddit.com/r/{sub}/",
+			"npm {pkg}": "https://www.npmjs.com/package/{pkg}",
+			"unpkg {pkg}": "https://unpkg.com/browse/{pkg}/",
+			"bp {pkg}": "https://bundlephobia.com/package/{pkg}",
+			"go {key}": ""
+		},
+		"macros": { "pkg {pkg}": ["npm {pkg}", "unpkg {pkg}", "bp {pkg}"] },
+		"defaults": {
+			"defaultRepo": "your-org/your-repo",
+			"defaultTrackerPrefix": "ABC-",
+			"trackerUrl": "https://your-tracker.example.com/browse/{id}"
+		}
+	}
+}
+

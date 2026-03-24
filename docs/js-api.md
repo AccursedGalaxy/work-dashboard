@@ -4,7 +4,7 @@ The app intentionally avoids a large global surface. The primary integration poi
 
 ## Global configuration objects
 
-- `window.DASHBOARD_DEFAULT_CONFIG` (optional): project-provided defaults from `config.example.js`
+- `window.DASHBOARD_DEFAULT_CONFIG` (optional): project-provided defaults from `config/example.js`
 - File-based config (optional): `config.json` or `config.yaml`/`config.yml`
 - `window.DASHBOARD_CONFIG` (optional): your overrides from `config.js`
 

@@ -1,6 +1,6 @@
 # Work Dashboard
 
-![Preview](./preview.png)
+![Preview](./docs/images/preview.png)
 
 ## What it does
 
@@ -28,7 +28,7 @@ Minimal, fast, and elegant personal start page for work. It gives you:
 
 ## Screenshots
 
-![Dashboard preview](./preview.png)
+![Dashboard preview](./docs/images/preview.png)
 
 ## Architecture
 
@@ -36,7 +36,7 @@ Minimal, fast, and elegant personal start page for work. It gives you:
 flowchart TD
   A[index.html] --> B[app.js]
   B --> C[config-loader.js]
-  C --> D[(config.json / config.yaml / config.js / config.example.js)]
+  C --> D[(config.json / config.yaml / config.js / config/example.js)]
   B --> E[UI: Links grid, Search forms, Quick Launcher, Keyboard shortcuts]
   B --> F[Mini Browser iframe]
   B --> G[Service Worker: sw.js]
@@ -49,7 +49,7 @@ flowchart TD
 
 At load time, `app.js` merges config sources in order with a deep-merge strategy:
 1. Built-in defaults defined in code
-2. `window.DASHBOARD_DEFAULT_CONFIG` from `config.example.js`
+2. `window.DASHBOARD_DEFAULT_CONFIG` from `config/example.js`
 3. File-based config if present: `config.json` or `config.yaml`/`config.yml`
 4. Your overrides from `window.DASHBOARD_CONFIG` in `config.js` (optional)
 
@@ -97,7 +97,7 @@ npm run start
 1. Clone/download this project.
 2. Choose a config method and customize:
   - Easiest: create `config.json` (or `config.yaml`) in the project root and add only the fields you want to change
-  - Alternative: copy `config.example.js` → `config.js` and edit it (kept out of git)
+  - Alternative: copy `config/example.js` → `config.js` and edit it (kept out of git)
   - To disable the mini browser entirely, set the field in your config:
     - JSON/YAML: `{ "miniBrowser": { "enable": false } }`
     - JS: `window.DASHBOARD_CONFIG = { miniBrowser: { enable: false } };`
@@ -108,13 +108,6 @@ npm run start
 > Note: `config.js` is git-ignored so your work-specific links remain private.
 
 > Tip: Only override what you need; unspecified fields fall back to defaults.
-
----
-
-### Local-only access
-
-- The dev server binds to `127.0.0.1` and is only reachable from the local machine.
-- To change the port, edit the `start` script in `package.json` or run `npx http-server -p 3000 -c-1 -a 127.0.0.1 .`.
 
 ---
 
@@ -220,4 +213,3 @@ The default CSP currently includes `style-src 'unsafe-inline'` due to dynamic UI
 
 - "Why do I need a local server?" — Opening `index.html` directly works, but a local server provides a proper origin which can avoid CSP and caching quirks.
 - "Where do I put company-specific links?" — In `config.js`. It stays out of version control.
-

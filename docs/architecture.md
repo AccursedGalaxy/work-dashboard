@@ -12,7 +12,7 @@ last_updated: 2025-08-19
 - Optional PWA via service worker
 
 ## Step-by-step
-1. Load `index.html` → scripts load (`config.example.js`, `config-loader.js`, optional `config.js`, `app.js`)
+1. Load `index.html` → scripts load (`config/example.js`, `config-loader.js`, optional `config.js`, `app.js`)
 2. Startup merges config and initializes UI and features
 3. SW caches app shell and assets
 

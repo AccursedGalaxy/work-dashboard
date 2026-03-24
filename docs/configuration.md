@@ -3,7 +3,7 @@
 Configuration is resolved from these sources and merged in order (later overrides earlier):
 
 1. Built-in defaults (in code)
-2. `window.DASHBOARD_DEFAULT_CONFIG` (from `config.example.js`)
+2. `window.DASHBOARD_DEFAULT_CONFIG` (from `config/example.js`)
 3. File-based config: `config.json` or `config.yaml`/`config.yml` (optional)
 4. `window.DASHBOARD_CONFIG` (from your `config.js`, optional)
 
@@ -137,7 +137,7 @@ export interface DashboardConfig {
 }
 ```
 
-Note: [`config.example.js`](../config.example.js) provides a documented baseline you can copy into `config.js`. The repository does not include `config.js`; create it by copying the example. Unspecified fields fall back to the built-in values above.
+Note: [`config/example.js`](../config/example.js) provides a documented baseline you can copy into `config.js`. The repository does not include `config.js`; create it by copying the example. Unspecified fields fall back to the built-in values above.
 
 ## Examples
 - See `docs/examples.md` for ready-to-copy snippets

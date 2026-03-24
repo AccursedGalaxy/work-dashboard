@@ -48,7 +48,7 @@ npm run start
 ## Technical Details
 - Scripts: `build` → tsc compile to `dist/`, postbuild copies `dist/app.js` and `dist/sw.js` to repo root.
 - Serve: `http-server -c-1 -p 8000 -a 127.0.0.1 .` (no cache; local-only binding)
-- Config sources (merge order): defaults → `config.example.js` → `config.json`/`config.yaml`/`config.yml` → `config.js`
+- Config sources (merge order): defaults → `config/example.js` → `config.json`/`config.yaml`/`config.yml` → `config.js`
 
 ## Common Pitfalls
 - Missing build outputs → Run `npm run build` before `start`
